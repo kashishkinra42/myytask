@@ -1,0 +1,54 @@
+@startuml
+
+!define RECTANGLE class
+skinparam rectangle {
+  BackgroundColor<<ServiceNow>> LightSkyBlue
+  BackgroundColor<<OneDrive>> LightGreen
+  BackgroundColor<<eBonding>> LightYellow
+}
+
+RECTANGLE ServiceNowCloud <<ServiceNow>> {
+  Incident
+  Post Mortem
+  Followup AI
+}
+
+RECTANGLE OneDrive <<OneDrive>> {
+  ims_pm_onedrive
+  1) Upload a document
+  2) Download a document
+  3) Share a document to users
+}
+
+RECTANGLE eBonding <<eBonding>> {
+  POST: /ims/create-post-mortem?incidentNo=IN3333
+  response: attachment (MSWord docs)
+  GET: /ims/parse-post-mortem?incidentNo=IN3333
+  response: application/json
+}
+
+cloud "Microsoft Azure Cloud" {
+  [OneDrive]
+}
+
+cloud "ServiceNow Cloud" {
+  [ServiceNowCloud]
+}
+
+[ServiceNowCloud] -right-> [eBonding] : 
+1) Create Incident in IMS
+2) Mitigate/Resolve Incident in IMS
+3) Create Post-Mortem
+
+[ServiceNowCloud] -down-> [OneDrive] : 
+1) Upload a document
+2) Download a document
+3) Share a document to users
+
+[eBonding] -down-> [OneDrive]
+
+note right of eBonding
+  PM-template.docx
+end note
+
+@enduml
