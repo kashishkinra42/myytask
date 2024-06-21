@@ -1,50 +1,51 @@
-
 @startuml
+!include <cloud/cloud>
+!include <cloud/internet>
+!include <aws/icons>
+!include <aws/general>
+!include <office/office>
+!include <material/material>
 
-!define RECTANGLE class
-skinparam rectangle {
-  BackgroundColor<<ServiceNow>> LightSkyBlue
-  BackgroundColor<<OneDrive>> LightGreen
-  BackgroundColor<<eBonding>> LightYellow
+!define SERVICE_COLOR #990000
+!define SYSTEM_COLOR #000099
+!define TOOL_COLOR #569926
+
+cloud "ServiceNow Cloud" as servicenow
+cloud "OneDrive" as onedrive {
+  icon office_onedrive, white
+  "Microsoft Azure Cloud" 
+}
+cloud "Confluence Page" as confluence {
+  icon aws_general, white
+  "Confluence Page"
 }
 
-RECTANGLE ServiceNowCloud <<ServiceNow>> {
-  Incident
-  Post Mortem
-  Followup AI
-}
+rectangle "eBonding (GS)" as ebonding
+diamond "PM-template.docx" as pmtemplate
 
-RECTANGLE ims_pm_onedrive <<OneDrive>> {
-  1) Upload a document
-  2) Download a document
-  3) Share a document to users
-}
+servicenow -d-> onedrive
+onedrive -d-|> servicenow
+servicenow -r-> ebonding
+ebonding -d-> pmtemplate
+ebonding -r-> confluence
 
-RECTANGLE eBonding <<eBonding>> {
+note right of ebonding
   POST: /ims/create-post-mortem?incidentNo=IN3333
   response: attachment (MSWord docs)
-  GET: /ims/parse-post-mortem?incidentNo=IN3333
+  GET:/ims/parse-post-mortem?incidentNo=IN3333
   response: application/json
-}
+end note
 
-cloud "Microsoft Azure Cloud" {
-  [ims_pm_onedrive]
-}
+note left of onedrive 
+  1) Upload a document
+  2) download a document
+  3) share a document to users
+end note
 
-cloud "ServiceNow Cloud" {
-  [ServiceNowCloud]
-}
-
-[ServiceNowCloud] -right-> [eBonding] : 
-1) Create Incident in IMS\n2) Mitigate/Resolve Incident in IMS\n3) Create Post-Mortem
-
-[ServiceNowCloud] -down-> [ims_pm_onedrive] : 
-1) Upload a document\n2) Download a document\n3) Share a document to users
-
-[eBonding] -down-> [ims_pm_onedrive]
-
-note right of eBonding
-  PM-template.docx
+note left of servicenow
+  1) Create Incident in IMS
+  2) Mitigate/Resole Incident in IMS
+  3) Create Post-Mortem
 end note
 
 @enduml
