@@ -1,3 +1,4 @@
+const { get } = require('express/lib/response');
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
@@ -25,7 +26,7 @@ async function extractContentControlTags(fpath) {
               const tagName = tag[0]['$']['w:val'];
               const tagValue = extractValueOftag(sdt['w:sdtContent'][0]);
               if(tagValue.trim() !== ''){
-                tags[tagName] = tagValue;
+                tags[tagName] = tagValue.trim();
               }
             }
           });
@@ -38,8 +39,7 @@ async function extractContentControlTags(fpath) {
       }
 
       function extractValueOftag(content){
-        let text = "";
-
+        let text ="";
         function traverseContent(contentNode){
           if(contentNode['w:t']){
             contentNode['w:t'].forEach(textNode => {
@@ -50,26 +50,31 @@ async function extractContentControlTags(fpath) {
               }
             });
           }
-          if(contentNode['w:r']){
+
+          // Handle other elements like hyperlinks, styles, etc.
+          if (contentNode['w:r']) {
             contentNode['w:r'].forEach(runNode => {
-              traverseContent(runNode);
+              if (runNode['w:t']) {
+                runNode['w:t'].forEach(tNode => {
+                  if (typeof tNode === 'string') {
+                    text += tNode;
+                  } else if (tNode['_']) {
+                    text += tNode['_'];
+                  }
+                });
+              }
             });
           }
-          if(contentNode['w:p']){
-            contentNode['w:p'].forEach(pNode => {
-              traverseContent(pNode);
-              text += '\n'; // Add newline for paragraph breaks
-            });
-          }
+
+          // Recursively handle other node types
           Object.values(contentNode).forEach(value => {
             if (Array.isArray(value)) {
               value.forEach(child => traverseContent(child));
             }
           });
         }
-
         traverseContent(content);
-        return text.replace(/\s+/g, ' ').trim(); // Remove extra spaces and trim
+        return text;
       }
 
       traverseNodes(body);
@@ -77,11 +82,10 @@ async function extractContentControlTags(fpath) {
       const jsonFile = JSON.stringify(tags, null, 2);
       fs.writeFileSync('myoutput.json', jsonFile);
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error : ', error);
   }
 }
 
 const fpath = './Test Document.docx';
-extractContentControlTags(fpath);
+extractContentControlTags(fpath); 
