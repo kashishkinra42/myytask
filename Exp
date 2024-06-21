@@ -1,91 +1,27 @@
-const { get } = require('express/lib/response');
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
+// const AdmZip = require('adm-zip');
+// var xpath = require('xpath');
+// var dom = require('@xmldom/xmldom').DOMParser;
 
-async function extractContentControlTags(fpath) {
-  try {
-    const data = fs.readFileSync(fpath);
-    const zip = await JSZip.loadAsync(data);
-    const documentXml = await zip.file('word/document.xml').async('text');
-    const parser = new xml2js.Parser();
+// const readZipFile = (zipFilePath, fileName) => {
+//     const zip = new AdmZip(zipFilePath);
+//     const zipEntry = zip.getEntry(fileName);
+//     const content = zipEntry.getData().toString('utf8');
+//     return content;
+// };
 
-    parser.parseString(documentXml, (err, result) => {
-      if (err) {
-        throw err;
-      }
+// const zipFilePath = './Test Document.docx';
+// const fileName = 'word/document.xml';
+// const content = readZipFile(zipFilePath, fileName);
+// var doc = new dom().parseFromString(content, 'text/xml');
+// var select = xpath.useNamespaces({"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"});
 
-      const tags = {};
-      const body = result['w:document']['w:body'][0];
+// select("//w:docPart/@w:val", doc).forEach(node => {
 
-      function traverseNodes(node) {
-        if (node['w:sdt']) {
-          node['w:sdt'].forEach(sdt => {
-            const tag = sdt['w:sdtPr'][0]['w:tag'];
-            if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
-              const tagName = tag[0]['$']['w:val'];
-              const tagValue = extractValueOftag(sdt['w:sdtContent'][0]);
-              if(tagValue.trim() !== ''){
-                tags[tagName] = tagValue.trim();
-              }
-            }
-          });
-        }
-        Object.values(node).forEach(value => {
-          if (Array.isArray(value)) {
-            value.forEach(child => traverseNodes(child));
-          }
-        });
-      }
+//     var placeHolderContent = node.ownerElement.parentNode.parentNode.parentNode;;
+//     var pContent = placeHolderContent.toString();
 
-      function extractValueOftag(content){
-        let text ="";
-        function traverseContent(contentNode){
-          if(contentNode['w:t']){
-            contentNode['w:t'].forEach(textNode => {
-              if(typeof textNode === 'string'){
-                text += textNode;
-              }else if(textNode['_']){
-                text += textNode['_'];
-              }
-            });
-          }
+// var tag = select('//w:tag/@w:val', new dom().parseFromString(pContent)).map(node => node.value).join('');
+// var value = select('//w:t/text()', new dom().parseFromString(pContent)).map(node => node.data).join('');
+// console.log({tag, value});
 
-          // Handle other elements like hyperlinks, styles, etc.
-          if (contentNode['w:r']) {
-            contentNode['w:r'].forEach(runNode => {
-              if (runNode['w:t']) {
-                runNode['w:t'].forEach(tNode => {
-                  if (typeof tNode === 'string') {
-                    text += tNode;
-                  } else if (tNode['_']) {
-                    text += tNode['_'];
-                  }
-                });
-              }
-            });
-          }
-
-          // Recursively handle other node types
-          Object.values(contentNode).forEach(value => {
-            if (Array.isArray(value)) {
-              value.forEach(child => traverseContent(child));
-            }
-          });
-        }
-        traverseContent(content);
-        return text;
-      }
-
-      traverseNodes(body);
-
-      const jsonFile = JSON.stringify(tags, null, 2);
-      fs.writeFileSync('myoutput.json', jsonFile);
-    });
-  } catch (error) {
-    console.error('Error : ', error);
-  }
-}
-
-const fpath = './Test Document.docx';
-extractContentControlTags(fpath); 
+// });
