@@ -1,37 +1,32 @@
 @startuml
 
-!define RECTANGLE class
 skinparam rectangle {
   BackgroundColor<<ServiceNow>> LightSkyBlue
   BackgroundColor<<OneDrive>> LightGreen
   BackgroundColor<<eBonding>> LightYellow
 }
 
-RECTANGLE ServiceNowCloud <<ServiceNow>> {
-  Incident
-  Post Mortem
-  Followup AI
+cloud "ServiceNow Cloud" {
+  class ServiceNowCloud <<ServiceNow>> {
+    Incident
+    Post Mortem
+    Followup AI
+  }
 }
 
-RECTANGLE ims_pm_onedrive <<OneDrive>> {
-  1) Upload a document
-  2) Download a document
-  3) Share a document to users
+cloud "Microsoft Azure Cloud" {
+  class ims_pm_onedrive <<OneDrive>> {
+    1) Upload a document
+    2) Download a document
+    3) Share a document to users
+  }
 }
 
-RECTANGLE eBonding <<eBonding>> {
+class eBonding <<eBonding>> {
   POST: /ims/create-post-mortem?incidentNo=IN3333
   response: attachment (MSWord docs)
   GET: /ims/parse-post-mortem?incidentNo=IN3333
   response: application/json
-}
-
-cloud "Microsoft Azure Cloud" {
-  [ims_pm_onedrive]
-}
-
-cloud "ServiceNow Cloud" {
-  [ServiceNowCloud]
 }
 
 [ServiceNowCloud] -right-> [eBonding] : 
