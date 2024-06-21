@@ -1,40 +1,29 @@
 @startuml
-rectangle "ServiceNow Cloud" as servicenow
-rectangle "OneDrive" as onedrive {
-  icon office_onedrive, white
-  "Microsoft Azure Cloud" 
-}
-rectangle "Confluence Page" as confluence {
-  icon aws_general, white
-  "Confluence Page"
-}
+sequenceDiagram
+    participant ServiceNow as "ServiceNow Cloud"
+    participant OneDrive as "OneDrive"
+    participant eBonding as "eBonding (GS)"
+    participant Confluence as "Confluence Page"
 
-rectangle "eBonding (GS)" as ebonding
-diamond "PM-template.docx" as pmtemplate
+    note "Create Incident in IMS"
+    ServiceNow->>ServiceNow: 1) Create Incident in IMS
+    ServiceNow->>ServiceNow: 2) Mitigate/Resole Incident in IMS
+    ServiceNow->>ServiceNow: 3) Create Post-Mortem
 
-servicenow -d-> onedrive
-onedrive -d-|> servicenow
-servicenow -r-> ebonding
-ebonding -d-> pmtemplate
-ebonding -r-> confluence
+    note "Upload document"
+    ServiceNow->>OneDrive: Upload document
+    OneDrive->>ServiceNow: document uploaded
 
-note right of ebonding
-  POST: /ims/create-post-mortem?incidentNo=IN3333
-  response: attachment (MSWord docs)
-  GET:/ims/parse-post-mortem?incidentNo=IN3333
-  response: application/json
-end note
+    note "Create Post-Mortem"
+    ServiceNow->>eBonding: POST: /ims/create-post-mortem?incidentNo=IN3333
+    eBonding->>ServiceNow: response: attachment (MSWord docs)
 
-note left of onedrive 
-  1) Upload a document
-  2) download a document
-  3) share a document to users
-end note
+    note "Parse Post-Mortem"
+    ServiceNow->>eBonding: GET:/ims/parse-post-mortem?incidentNo=IN3333
+    eBonding->>ServiceNow: response: application/json
 
-note left of servicenow
-  1) Create Incident in IMS
-  2) Mitigate/Resole Incident in IMS
-  3) Create Post-Mortem
-end note
+    note "Share document"
+    eBonding->>Confluence: share document
+    Confluence->>eBonding: document shared
 
 @enduml
