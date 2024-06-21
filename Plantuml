@@ -1,29 +1,49 @@
 @startuml
-sequenceDiagram
-    participant ServiceNow as "ServiceNow Cloud"
-    participant OneDrive as "OneDrive"
-    participant eBonding as "eBonding (GS)"
-    participant Confluence as "Confluence Page"
 
-    note "Create Incident in IMS"
-    ServiceNow->>ServiceNow: 1) Create Incident in IMS
-    ServiceNow->>ServiceNow: 2) Mitigate/Resole Incident in IMS
-    ServiceNow->>ServiceNow: 3) Create Post-Mortem
+!define RECTANGLE class
+skinparam rectangle {
+  BackgroundColor<<ServiceNow>> LightSkyBlue
+  BackgroundColor<<OneDrive>> LightGreen
+  BackgroundColor<<eBonding>> LightYellow
+}
 
-    note "Upload document"
-    ServiceNow->>OneDrive: Upload document
-    OneDrive->>ServiceNow: document uploaded
+RECTANGLE ServiceNowCloud <<ServiceNow>> {
+  Incident
+  Post Mortem
+  Followup AI
+}
 
-    note "Create Post-Mortem"
-    ServiceNow->>eBonding: POST: /ims/create-post-mortem?incidentNo=IN3333
-    eBonding->>ServiceNow: response: attachment (MSWord docs)
+RECTANGLE ims_pm_onedrive <<OneDrive>> {
+  1) Upload a document
+  2) Download a document
+  3) Share a document to users
+}
 
-    note "Parse Post-Mortem"
-    ServiceNow->>eBonding: GET:/ims/parse-post-mortem?incidentNo=IN3333
-    eBonding->>ServiceNow: response: application/json
+RECTANGLE eBonding <<eBonding>> {
+  POST: /ims/create-post-mortem?incidentNo=IN3333
+  response: attachment (MSWord docs)
+  GET: /ims/parse-post-mortem?incidentNo=IN3333
+  response: application/json
+}
 
-    note "Share document"
-    eBonding->>Confluence: share document
-    Confluence->>eBonding: document shared
+cloud "Microsoft Azure Cloud" {
+  [ims_pm_onedrive]
+}
+
+cloud "ServiceNow Cloud" {
+  [ServiceNowCloud]
+}
+
+[ServiceNowCloud] -right-> [eBonding] : 
+1) Create Incident in IMS\n2) Mitigate/Resolve Incident in IMS\n3) Create Post-Mortem
+
+[ServiceNowCloud] -down-> [ims_pm_onedrive] : 
+1) Upload a document\n2) Download a document\n3) Share a document to users
+
+[eBonding] -down-> [ims_pm_onedrive]
+
+note right of eBonding
+  PM-template.docx
+end note
 
 @enduml
