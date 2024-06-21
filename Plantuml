@@ -1,21 +1,10 @@
 @startuml
-!include <cloud/cloud>
-!include <cloud/internet>
-!include <aws/icons>
-!include <aws/general>
-!include <office/office>
-!include <material/material>
-
-!define SERVICE_COLOR #990000
-!define SYSTEM_COLOR #000099
-!define TOOL_COLOR #569926
-
-cloud "ServiceNow Cloud" as servicenow
-cloud "OneDrive" as onedrive {
+rectangle "ServiceNow Cloud" as servicenow
+rectangle "OneDrive" as onedrive {
   icon office_onedrive, white
   "Microsoft Azure Cloud" 
 }
-cloud "Confluence Page" as confluence {
+rectangle "Confluence Page" as confluence {
   icon aws_general, white
   "Confluence Page"
 }
