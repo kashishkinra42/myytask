@@ -1,3 +1,4 @@
+
 @startuml
 
 !define RECTANGLE class
@@ -13,8 +14,7 @@ RECTANGLE ServiceNowCloud <<ServiceNow>> {
   Followup AI
 }
 
-RECTANGLE OneDrive <<OneDrive>> {
-  ims_pm_onedrive
+RECTANGLE ims_pm_onedrive <<OneDrive>> {
   1) Upload a document
   2) Download a document
   3) Share a document to users
@@ -28,7 +28,7 @@ RECTANGLE eBonding <<eBonding>> {
 }
 
 cloud "Microsoft Azure Cloud" {
-  [OneDrive]
+  [ims_pm_onedrive]
 }
 
 cloud "ServiceNow Cloud" {
@@ -36,16 +36,12 @@ cloud "ServiceNow Cloud" {
 }
 
 [ServiceNowCloud] -right-> [eBonding] : 
-1) Create Incident in IMS
-2) Mitigate/Resolve Incident in IMS
-3) Create Post-Mortem
+1) Create Incident in IMS\n2) Mitigate/Resolve Incident in IMS\n3) Create Post-Mortem
 
-[ServiceNowCloud] -down-> [OneDrive] : 
-1) Upload a document
-2) Download a document
-3) Share a document to users
+[ServiceNowCloud] -down-> [ims_pm_onedrive] : 
+1) Upload a document\n2) Download a document\n3) Share a document to users
 
-[eBonding] -down-> [OneDrive]
+[eBonding] -down-> [ims_pm_onedrive]
 
 note right of eBonding
   PM-template.docx
