@@ -1,27 +1,40 @@
-// const AdmZip = require('adm-zip');
-// var xpath = require('xpath');
-// var dom = require('@xmldom/xmldom').DOMParser;
+const AdmZip = require('adm-zip');
+var xpath = require('xpath');
+var dom = require('@xmldom/xmldom').DOMParser;
+const fs = require('fs');
 
-// const readZipFile = (zipFilePath, fileName) => {
-//     const zip = new AdmZip(zipFilePath);
-//     const zipEntry = zip.getEntry(fileName);
-//     const content = zipEntry.getData().toString('utf8');
-//     return content;
-// };
+const readZipFile = (zipFilePath, fileName) => {
+    const zip = new AdmZip(zipFilePath);
+    const zipEntry = zip.getEntry(fileName);
+    const content = zipEntry.getData().toString('utf8');
+    return content;
+};
 
-// const zipFilePath = './Test Document.docx';
-// const fileName = 'word/document.xml';
-// const content = readZipFile(zipFilePath, fileName);
-// var doc = new dom().parseFromString(content, 'text/xml');
-// var select = xpath.useNamespaces({"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"});
+const extractContentControlTags = (zipFilePath, fileName) => {
+    const content = readZipFile(zipFilePath, fileName);
+    var doc = new dom().parseFromString(content, 'text/xml');
+    var select = xpath.useNamespaces({"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"});
+    
+    const tags = {};
+    
+    select("//w:docPart/@w:val", doc).forEach(node => {
+        var placeHolderContent = node.ownerElement.parentNode.parentNode.parentNode;
+        var pContent = placeHolderContent.toString();
 
-// select("//w:docPart/@w:val", doc).forEach(node => {
+        var tag = select('//w:tag/@w:val', new dom().parseFromString(pContent)).map(node => node.value).join('');
+        var value = select('//w:t/text()', new dom().parseFromString(pContent)).map(node => node.data).join('');
+        
+        if (tag.trim() !== '' && value.trim() !== '') {
+            tags[tag] = value.trim();
+        }
+    });
 
-//     var placeHolderContent = node.ownerElement.parentNode.parentNode.parentNode;;
-//     var pContent = placeHolderContent.toString();
+    return tags;
+};
 
-// var tag = select('//w:tag/@w:val', new dom().parseFromString(pContent)).map(node => node.value).join('');
-// var value = select('//w:t/text()', new dom().parseFromString(pContent)).map(node => node.data).join('');
-// console.log({tag, value});
+const zipFilePath = './Test Document.docx';
+const fileName = 'word/document.xml';
+const tags = extractContentControlTags(zipFilePath, fileName);
 
-// });
+const jsonFile = JSON.stringify(tags, null, 2);
+fs.writeFileSync('myoutput.json', jsonFile);
