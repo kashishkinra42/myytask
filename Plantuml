@@ -7,38 +7,34 @@ skinparam rectangle {
 }
 
 cloud "ServiceNow Cloud" {
-  class ServiceNowCloud <<ServiceNow>> {
-    Incident
-    Post Mortem
-    Followup AI
+  class ServiceNow <<ServiceNow>> {
+    Process:
+    - Create incident in Word doc using template
+    - Mitigate/resolve issue in MS Word
+    - Create post mortem of incident
   }
 }
 
 cloud "Microsoft Azure Cloud" {
-  class ims_pm_onedrive <<OneDrive>> {
-    1) Upload a document
-    2) Download a document
-    3) Share a document to users
+  class OneDrive <<OneDrive>> {
+    - Upload document
+    - Download document
+    - Share document to users
+    Templates: 
+    - Word template
   }
 }
 
 class eBonding <<eBonding>> {
-  POST: /ims/create-post-mortem?incidentNo=IN3333
-  response: attachment (MSWord docs)
-  GET: /ims/parse-post-mortem?incidentNo=IN3333
-  response: application/json
+  - Post mortem document
 }
 
-[ServiceNowCloud] -right-> [eBonding] : 
-1) Create Incident in IMS\n2) Mitigate/Resolve Incident in IMS\n3) Create Post-Mortem
+ServiceNow -right-> eBonding : 
+  - Create post mortem
 
-[ServiceNowCloud] -down-> [ims_pm_onedrive] : 
-1) Upload a document\n2) Download a document\n3) Share a document to users
-
-[eBonding] -down-> [ims_pm_onedrive]
-
-note right of eBonding
-  PM-template.docx
-end note
+ServiceNow -down-> OneDrive : 
+  - Upload document
+  - Download document
+  - Share document to users
 
 @enduml
