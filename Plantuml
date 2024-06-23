@@ -1,59 +1,11 @@
-@startuml
+[6:12 PM] Pandurangan, Vijay [Engineering]
+Now you got the json right
+[6:12 PM] Pandurangan, Vijay [Engineering]
+Now try figure you why it’s not reading the properties
+[6:12 PM] Pandurangan, Vijay [Engineering]
+Add logs
+[6:13 PM] Pandurangan, Vijay [Engineering]
+Pandurangan, Vijay [Engineering] 
+If hasOwnProperty is not helping Just read the properly and if it is not null Update it
 
-skinparam rectangle {
-  BackgroundColor<<ServiceNow>> LightSkyBlue
-  BackgroundColor<<OneDrive>> LightGreen
-  BackgroundColor<<eBonding>> LightYellow
-}
-
-cloud "ServiceNow Cloud" <<ServiceNow>> {
-  class ServiceNow {
-    Incident
-    Post Mortem
-    Followup AI
-    1) Create Incident in IMS
-    2) Mitigate/Resolve Incident in IMS
-    3) Create Post-Mortem
-  }
-}
-
-cloud "Microsoft Azure Cloud" {
-  class OneDrive <<OneDrive>> {
-    ims_pm_onedrive
-    1) Upload a document
-    2) Download a document
-    3) Share a document to users
-  }
-}
-
-class eBonding <<eBonding>> {
-  POST: /ims/create-post-mortem?incidentNo=IN3333
-  response: attachment (MSWord docs)
-  GET: /ims/parse-post-mortem?incidentNo=IN3333
-  response: application/json
-  PM-template.docx
-}
-
-ServiceNow -down-> OneDrive : Upload/Download/Share documents
-ServiceNow -right-> eBonding : GS (Create Post-Mortem)
-
-note right of eBonding
-  POST: /ims/create-post-mortem?incidentNo=IN3333
-  response: attachment (MSWord docs)
-  GET: /ims/parse-post-mortem?incidentNo=IN3333
-  response: application/json
-end note
-
-note right of ServiceNow
-  Create Incident in IMS
-  Mitigate/Resolve Incident in IMS
-  Create Post-Mortem
-end note
-
-note left of OneDrive
-  Upload a document
-  Download a document
-  Share a document to users
-end note
-
-@enduml
+Else read it and check for undefined and see whether it works
