@@ -229,87 +229,35 @@ app.listen(PORT, () => {
 
 -------------------
 
+[5:38 PM] Pandurangan, Vijay [Engineering]
+Hmm instead of curl 
 
-  const express = require('express');
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const xpath = require('xpath');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const { v4: uuidv4 } = require('uuid');
+Please write a nodejs program to post the json content
+[5:38 PM] Pandurangan, Vijay [Engineering]
+We can be sure
+[5:38 PM] Kinra, Kashish [Engineering]
+okay then we dont need to run the curl command 
+[5:38 PM] Kinra, Kashish [Engineering]
+right
+[5:38 PM] Pandurangan, Vijay [Engineering]
+Yes
+[5:38 PM] Pandurangan, Vijay [Engineering]
+Another node js script
+[5:38 PM] Kinra, Kashish [Engineering]
+okayy
+[5:39 PM] Pandurangan, Vijay [Engineering]
+Say “node postdata.js”
+[5:39 PM] Pandurangan, Vijay [Engineering]
+Will post the json
+[5:39 PM] Pandurangan, Vijay [Engineering]
+To your url
+[5:40 PM] Kinra, Kashish [Engineering]
+it will post the output.json to the app.js . right? it will itself not have the json
+[5:40 PM] Pandurangan, Vijay [Engineering]
+You post the output.json to http://localhost:3000/update-document
+[5:41 PM] Pandurangan, Vijay [Engineering]
+Pandurangan, Vijay [Engineering] 
+You post the output.json to http://localhost:3000/update-document
 
-const app = express();
-app.use(express.json());
-
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-const readZipFile = (zipFilePath, fileName) => {
-  const zip = new AdmZip(zipFilePath);
-  const zipEntry = zip.getEntry(fileName);
-  const content = zipEntry.getData().toString('utf8');
-  return content;
-};
-
-const writeZipFile = (zipFilePath, fileName, content) => {
-  const zip = new AdmZip(zipFilePath);
-  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
-  zip.writeZip(zipFilePath);
-};
-
-const replacePlaceholder = (documentContent, jsonContent) => {
-  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
-  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
-  const tags = jsonContent;
-
-  select("//w:sdt", doc).forEach(node => {
-    var tagNode = select('.//w:tag/@w:val', node)[0];
-    if (tagNode) {
-      const tagName = tagNode.value;
-      if (tags.hasOwnProperty(tagName)) {
-        const textNodes = select('.//w:t', node);
-        if (textNodes.length > 0) {
-          textNodes.forEach(textNode => {
-            textNode.textContent = tags[tagName];
-          });
-        }
-      }
-    }
-  });
-  const serializer = new XMLSerializer();
-  const updatedContent = serializer.serializeToString(doc);
-  return updatedContent;
-};
-
-app.post('/update-document', (req, res) => {
-  log(`Received JSON: ${JSON.stringify(req.body)}`);
-  const templateFilePath = './Test Document.docx';
-  const fileName = 'word/document.xml';
-  const jsonContent = req.body;
-
-  try {
-    const newFileName = `./${uuidv4()}.docx`;
-    fs.copyFileSync(templateFilePath, newFileName);
-
-    const documentContent = readZipFile(newFileName, fileName);
-    const updatedContent = replacePlaceholder(documentContent, jsonContent);
-    writeZipFile(newFileName, fileName, updatedContent);
-
-    res.download(newFileName, (err) => {
-      if (err) {
-        res.status(500).send('Error sending file');
-      } else {
-        fs.unlinkSync(newFileName); // Remove the file after sending
-      }
-    });
-  } catch (error) {
-    console.error('Error updating document:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  log(`Server is running on port ${PORT}`);
-});
+Post the output.json content
 
