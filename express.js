@@ -90,3 +90,13 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`Server is running on port ${PORT}`);
 });
+
+
+
+
+
+
+curl -X POST \
+  http://localhost:3000/update-document \
+  -H 'Content-Type: application/json' \
+  -d '{"tagName1": "tagValue1", "tagName2": "tagValue2"}'
