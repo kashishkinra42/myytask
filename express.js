@@ -228,36 +228,22 @@ app.listen(PORT, () => {
 
 
 -------------------
+const fs = require('fs');
+const axios = require('axios');
 
-[5:38 PM] Pandurangan, Vijay [Engineering]
-Hmm instead of curl 
+// Read JSON content from output.json
+const jsonData = JSON.parse(fs.readFileSync('output.json', 'utf8'));
 
-Please write a nodejs program to post the json content
-[5:38 PM] Pandurangan, Vijay [Engineering]
-We can be sure
-[5:38 PM] Kinra, Kashish [Engineering]
-okay then we dont need to run the curl command 
-[5:38 PM] Kinra, Kashish [Engineering]
-right
-[5:38 PM] Pandurangan, Vijay [Engineering]
-Yes
-[5:38 PM] Pandurangan, Vijay [Engineering]
-Another node js script
-[5:38 PM] Kinra, Kashish [Engineering]
-okayy
-[5:39 PM] Pandurangan, Vijay [Engineering]
-Say “node postdata.js”
-[5:39 PM] Pandurangan, Vijay [Engineering]
-Will post the json
-[5:39 PM] Pandurangan, Vijay [Engineering]
-To your url
-[5:40 PM] Kinra, Kashish [Engineering]
-it will post the output.json to the app.js . right? it will itself not have the json
-[5:40 PM] Pandurangan, Vijay [Engineering]
-You post the output.json to http://localhost:3000/update-document
-[5:41 PM] Pandurangan, Vijay [Engineering]
-Pandurangan, Vijay [Engineering] 
-You post the output.json to http://localhost:3000/update-document
+// Define the URL of your server endpoint
+const url = 'http://localhost:3000/update-document';
 
-Post the output.json content
+// Post the JSON content to the server
+axios.post(url, jsonData)
+  .then(response => {
+    console.log(`Status: ${response.status}`);
+    console.log('Document updated successfully');
+  })
+  .catch(error => {
+    console.error('Error posting data:', error);
+  });
 
