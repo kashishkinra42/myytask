@@ -100,3 +100,9 @@ curl -X POST \
   http://localhost:3000/update-document \
   -H 'Content-Type: application/json' \
   -d '{"tagName1": "tagValue1", "tagName2": "tagValue2"}'
+
+
+
+Copy the template to  a new file name (unique name) 
+Use that new file name as zipFilePath 
+once data / document is updated - either send the new file back as response or return the new file name
