@@ -78,8 +78,7 @@ const fpath = './Test Document.docx';
 extractContentControlTags(fpath);
 
 ========================
-  ============================
-  const fs = require('fs');
+const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
 
@@ -190,6 +189,3 @@ async function extractContentControlTags(fpath) {
 
 const fpath = './Test Document.docx';
 extractContentControlTags(fpath);
-
-  
-  ==========================================================
