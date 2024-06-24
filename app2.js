@@ -55,3 +55,27 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`Server is running on port ${PORT}`);
 });
+
+
+
+// ==================
+
+
+const fs = require('fs');
+const axios = require('axios');
+
+// Read JSON content from myoutput.json
+const jsonData = JSON.parse(fs.readFileSync('myoutput.json', 'utf8'));
+
+// Define the URL of your server endpoint
+const url = 'http://localhost:3000/update-document';
+
+// POST the JSON content to the server
+axios.post(url, jsonData)
+  .then(response => {
+    console.log(`Status: ${response.status}`);
+    console.log('Document updated successfully');
+  })
+  .catch(error => {
+    console.error('Error posting data:', error.message);
+  });
