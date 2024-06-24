@@ -63,8 +63,6 @@ console.log('Document updated successfully');
 //-------
 
 
-
-
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
@@ -85,12 +83,14 @@ async function extractContentControlTags(fpath) {
       const body = result['w:document']['w:body'][0];
 
       function traverseNodes(node) {
-        if (node['w:sdt']) {
+        if (node['w:sdt'] && Array.isArray(node['w:sdt'])) {
           node['w:sdt'].forEach(sdt => {
-            const tag = sdt['w:sdtPr'][0]['w:tag'];
-            if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
-              const tagName = tag[0]['$']['w:val'];
-              const tagValue = extractValueOftag(sdt['w:sdtContent'][0]);
+            const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
+            const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
+            if (tag && tag['$'] && tag['$']['w:val']) {
+              const tagName = tag['$']['w:val'];
+              const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
+              const tagValue = sdtContent ? extractValueOftag(sdtContent) : '';
               if (tagValue.trim() !== '') {
                 tags[tagName] = tagValue;
               }
@@ -110,7 +110,7 @@ async function extractContentControlTags(fpath) {
       function extractValueOftag(content) {
         let text = "";
         function traverseContent(contentNode) {
-          if (contentNode['w:t']) {
+          if (contentNode['w:t'] && Array.isArray(contentNode['w:t'])) {
             contentNode['w:t'].forEach(textNode => {
               if (typeof textNode === 'string') {
                 text += textNode;
@@ -132,12 +132,12 @@ async function extractContentControlTags(fpath) {
       function extractNumberedList(node) {
         let list = [];
         function traverseList(contentNode, level = 0) {
-          if (contentNode['w:p']) {
+          if (contentNode['w:p'] && Array.isArray(contentNode['w:p'])) {
             contentNode['w:p'].forEach(pNode => {
               let text = "";
-              if (pNode['w:r']) {
+              if (pNode['w:r'] && Array.isArray(pNode['w:r'])) {
                 pNode['w:r'].forEach(rNode => {
-                  if (rNode['w:t']) {
+                  if (rNode['w:t'] && Array.isArray(rNode['w:t'])) {
                     rNode['w:t'].forEach(tNode => {
                       if (typeof tNode === 'string') {
                         text += tNode;
@@ -182,5 +182,3 @@ async function extractContentControlTags(fpath) {
 
 const fpath = './Test Document.docx';
 extractContentControlTags(fpath);
-
-
