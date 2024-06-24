@@ -201,3 +201,270 @@ async function extractContentControlTags(fpath) {
 const fpath = './Test Document.docx';
 extractContentControlTags(fpath);
 
+
+//--------------------------
+
+
+ "w:sdtContent": [
+                      {
+                        "w:tc": [
+                          {
+                            "w:tcPr": [
+                              {
+                                "w:cnfStyle": [
+                                  {
+                                    "$": {
+                                      "w:val": "001000000000",
+                                      "w:firstRow": "0",
+                                      "w:lastRow": "0",
+                                      "w:firstColumn": "1",
+                                      "w:lastColumn": "0",
+                                      "w:oddVBand": "0",
+                                      "w:evenVBand": "0",
+                                      "w:oddHBand": "0",
+                                      "w:evenHBand": "0",
+                                      "w:firstRowFirstColumn": "0",
+                                      "w:firstRowLastColumn": "0",
+                                      "w:lastRowFirstColumn": "0",
+                                      "w:lastRowLastColumn": "0"
+                                    }
+                                  }
+                                ],
+                                "w:tcW": [
+                                  {
+                                    "$": {
+                                      "w:w": "9677",
+                                      "w:type": "dxa"
+                                    }
+                                  }
+                                ]
+                              }
+                            ],
+                            "w:p": [
+                              {
+                                "$": {
+                                  "w14:paraId": "4A9E8E91",
+                                  "w14:textId": "0027FC66",
+                                  "w:rsidR": "00EE43F6",
+                                  "w:rsidRPr": "002D781F",
+                                  "w:rsidRDefault": "00EE43F6",
+                                  "w:rsidP": "00EE43F6"
+                                },
+                                "w:pPr": [
+                                  {
+                                    "w:pStyle": [
+                                      {
+                                        "$": {
+                                          "w:val": "ListParagraph"
+                                        }
+                                      }
+                                    ],
+                                    "w:numPr": [
+                                      {
+                                        "w:ilvl": [
+                                          {
+                                            "$": {
+                                              "w:val": "0"
+                                            }
+                                          }
+                                        ],
+                                        "w:numId": [
+                                          {
+                                            "$": {
+                                              "w:val": "1"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ],
+                                    "w:rPr": [
+                                      {
+                                        "w:rFonts": [
+                                          {
+                                            "$": {
+                                              "w:cstheme": "minorHAnsi"
+                                            }
+                                          }
+                                        ],
+                                        "w:sz": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ],
+                                        "w:szCs": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ],
+                                "w:r": [
+                                  {
+                                    "w:rPr": [
+                                      {
+                                        "w:rFonts": [
+                                          {
+                                            "$": {
+                                              "w:cstheme": "minorHAnsi"
+                                            }
+                                          }
+                                        ],
+                                        "w:sz": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ],
+                                        "w:szCs": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ],
+                                    "w:t": [
+                                      {
+                                        "$": {
+                                          "xml:space": "preserve"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "w:rPr": [
+                                      {
+                                        "w:rFonts": [
+                                          {
+                                            "$": {
+                                              "w:cstheme": "minorHAnsi"
+                                            }
+                                          }
+                                        ],
+                                        "w:sz": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ],
+                                        "w:szCs": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ],
+                                    "w:t": [
+                                      "Kash"
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "$": {
+                                  "w14:paraId": "3FD03801",
+                                  "w14:textId": "77777777",
+                                  "w:rsidR": "00EE43F6",
+                                  "w:rsidRPr": "002D781F",
+                                  "w:rsidRDefault": "00EE43F6",
+                                  "w:rsidP": "00EE43F6"
+                                },
+                                "w:pPr": [
+                                  {
+                                    "w:pStyle": [
+                                      {
+                                        "$": {
+                                          "w:val": "ListParagraph"
+                                        }
+                                      }
+                                    ],
+                                    "w:numPr": [
+                                      {
+                                        "w:ilvl": [
+                                          {
+                                            "$": {
+                                              "w:val": "0"
+                                            }
+                                          }
+                                        ],
+                                        "w:numId": [
+                                          {
+                                            "$": {
+                                              "w:val": "1"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ],
+                                    "w:rPr": [
+                                      {
+                                        "w:rFonts": [
+                                          {
+                                            "$": {
+                                              "w:cstheme": "minorHAnsi"
+                                            }
+                                          }
+                                        ],
+                                        "w:sz": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ],
+                                        "w:szCs": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ],
+                                "w:r": [
+                                  {
+                                    "w:rPr": [
+                                      {
+                                        "w:rFonts": [
+                                          {
+                                            "$": {
+                                              "w:cstheme": "minorHAnsi"
+                                            }
+                                          }
+                                        ],
+                                        "w:sz": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ],
+                                        "w:szCs": [
+                                          {
+                                            "$": {
+                                              "w:val": "40"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ],
+                                    "w:t": [
+                                      "Kinra"
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
