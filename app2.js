@@ -1,9 +1,8 @@
 const express = require('express');
 const fs = require('fs');
+const multer = require('multer');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
-const { v4: uuidv4 } = require('uuid');
-const multer = require('multer');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -12,91 +11,86 @@ const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
 };
 
-const readDocumentXml = async (fpath) => {
-  const data = fs.readFileSync(fpath);
-  const zip = await JSZip.loadAsync(data);
-  const documentXml = await zip.file('word/document.xml').async('text');
-  return documentXml;
-};
+const extractContentControlTags = async (filePath) => {
+  try {
+    const data = fs.readFileSync(filePath);
+    const zip = await JSZip.loadAsync(data);
+    const documentXml = await zip.file('word/document.xml').async('text');
+    const parser = new xml2js.Parser();
+    const tags = {};
 
-const parseDocumentXml = (documentXml) => {
-  const parser = new xml2js.Parser();
-  return new Promise((resolve, reject) => {
     parser.parseString(documentXml, (err, result) => {
       if (err) {
-        return reject(err);
+        throw err;
       }
-      const tags = extractTagsFromBody(result['w:document']['w:body'][0]);
-      resolve(tags);
-    });
-  });
-};
 
-const extractTagsFromBody = (body) => {
-  const tags = {};
+      const body = result['w:document']['w:body'][0];
 
-  function traverseNodes(node) {
-    if (node['w:sdt']) {
-      node['w:sdt'].forEach(sdt => {
-        const tag = sdt['w:sdtPr'][0]['w:tag'];
-        if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
-          const tagName = tag[0]['$']['w:val'];
-          const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          if (tagValue.trim() !== '') {
-            tags[tagName] = tagValue;
+      function traverseNodes(node) {
+        if (node['w:sdt']) {
+          node['w:sdt'].forEach(sdt => {
+            const tag = sdt['w:sdtPr'][0]['w:tag'];
+            if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
+              const tagName = tag[0]['$']['w:val'];
+              const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
+              if (tagValue.trim() !== '') {
+                tags[tagName] = tagValue;
+              }
+            }
+          });
+        }
+        Object.values(node).forEach(value => {
+          if (Array.isArray(value)) {
+            value.forEach(child => traverseNodes(child));
           }
-        }
-      });
-    }
-    Object.values(node).forEach(value => {
-      if (Array.isArray(value)) {
-        value.forEach(child => traverseNodes(child));
+        });
       }
-    });
-  }
 
-  traverseNodes(body);
-  return tags;
+      function extractTagValue(content) {
+        let text = '';
+        function traverseContent(contentNode) {
+          if (contentNode['w:t']) {
+            contentNode['w:t'].forEach(textNode => {
+              if (typeof textNode === 'string') {
+                text += textNode;
+              } else if (textNode['_']) {
+                text += textNode['_'];
+              }
+            });
+          }
+          Object.values(contentNode).forEach(value => {
+            if (Array.isArray(value)) {
+              value.forEach(child => traverseContent(child));
+            }
+          });
+        }
+        traverseContent(content);
+        return text;
+      }
+      traverseNodes(body);
+    });
+
+    return tags;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
 };
 
-const extractTagValue = (content) => {
-  let text = '';
-
-  function traverseContent(contentNode) {
-    if (contentNode['w:t']) {
-      contentNode['w:t'].forEach(textNode => {
-        if (typeof textNode === 'string') {
-          text += textNode;
-        } else if (textNode['_']) {
-          text += textNode['_'];
-        }
-      });
-    }
-    Object.values(contentNode).forEach(value => {
-      if (Array.isArray(value)) {
-        value.forEach(child => traverseContent(child));
-      }
-    });
-  }
-
-  traverseContent(content);
-  return text;
-};
-
-app.post('/extract-tags', upload.single('document'), async (req, res) => {
-  log('Received file upload request');
+app.post('/extract-tags', upload.single('file'), async (req, res) => {
+  log(`Received file for extraction: ${req.file.path}`);
+  const filePath = req.file.path;
 
   try {
-    const filePath = req.file.path;
-    const documentXml = await readDocumentXml(filePath);
-    const tags = await parseDocumentXml(documentXml);
-
-    fs.unlinkSync(filePath); // Clean up the uploaded file
-
-    res.status(200).json(tags);
+    const tags = await extractContentControlTags(filePath);
+    const jsonFilePath = './myoutput.json';
+    fs.writeFileSync(jsonFilePath, JSON.stringify(tags, null, 2));
+    res.status(200).send(`Tags extracted successfully. Saved as ${jsonFilePath}`);
   } catch (error) {
     console.error('Error extracting tags:', error);
     res.status(500).send('Internal Server Error');
+  } finally {
+    fs.unlinkSync(filePath); // Clean up the uploaded file
   }
 });
 
