@@ -299,14 +299,18 @@ function extractTagValue(content) {
         if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
           // Detect a numbered list item
           const listItem = extractTextFromNode(pNode);
-          if (listItem.trim() !== '') {
+          if (typeof listItem === 'string' && listItem.trim() !== '') {
+            listItems.push(listItem);
+          } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
             listItems.push(listItem);
           }
         } else {
           // Regular text node
           const pText = extractTextFromNode(pNode);
-          if (pText.trim() !== '') {
+          if (typeof pText === 'string' && pText.trim() !== '') {
             text += pText;
+          } else if (typeof pText === 'object' && pText.text.trim() !== '') {
+            text += pText.text;
           }
         }
       });
@@ -348,7 +352,7 @@ function extractTagValue(content) {
   traverseContent(content);
 
   if (listItems.length > 0) {
-    // Return list items as an array of strings
+    // Return list items as an array of strings or objects
     return listItems;
   } else {
     return text;
@@ -362,4 +366,3 @@ function saveTagsToFile(tags, outputPath) {
 
 const fpath = './Test Document.docx';
 extractContentControlTags(fpath);
-
