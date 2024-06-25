@@ -1,34 +1,3 @@
-
-const express = require('express');
-const multer = require('multer');
-
-const app = express();
-const upload = multer({ dest: 'uploads/' });
-
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-app.post('/extract-tags', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    log(`No file received in the request`);
-    return res.status(400).send('No file uploaded');
-  }
-
-  log(`Received file for extraction: ${req.file.path}`);
-  const filePath = req.file.path;
-
-  res.status(200).json({ filePath });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  log(`Server is running on port ${PORT}`);
-});
-
-
-
-
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -114,7 +83,6 @@ const extractContentControlTags = async (filePath) => {
   }
 };
 
-// Function to upload document and extract tags
 const uploadDocument = async (filePath) => {
   try {
     const response = await axios.post('http://localhost:3000/extract-tags', {}, {
@@ -144,4 +112,34 @@ const uploadDocument = async (filePath) => {
 const filePath = path.join(__dirname, 'your-document.docx');
 uploadDocument(filePath);
 
+
+//———
+
+
+App.js
+const express = require('express');
+const multer = require('multer');
+const app = express();
+const upload = multer({ dest: 'uploads/' });
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+app.post('/extract-tags', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    log(`No file received in the request`);
+    return res.status(400).send('No file uploaded');
+  }
+
+  log(`Received file for extraction: ${req.file.path}`);
+  const filePath = req.file.path;
+
+  res.status(200).json({ filePath });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  log(`Server is running on port ${PORT}`);
+});
 
