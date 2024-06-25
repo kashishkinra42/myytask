@@ -175,8 +175,10 @@ console.log('Document updated successfully');
     ======================
 const fs = require('fs');
 const AdmZip = require('adm-zip');
-const xpath = require('xpath');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+var xpath = require('xpath');
+const { json } = require('express/lib/response');
+var dom = require('@xmldom/xmldom').DOMParser;
+const xmlSerializer = require('@xmldom/xmldom').XMLSerializer;
 
 const readZipFile = (zipFilePath, fileName) => {
     const zip = new AdmZip(zipFilePath);
@@ -191,55 +193,61 @@ const writeZipFile = (zipFilePath, fileName, content) => {
     zip.writeZip(zipFilePath);
 }
 
-const createNumberedList = (items) => {
-    return items.map((item, index) => {
-        if (typeof item === 'object' && item.highlighted) {
-            return `<w:p><w:r><w:t>${index + 1}. </w:t></w:r><w:r><w:rPr><w:highlight w:val="yellow"/></w:rPr><w:t>${item.text}</w:t></w:r></w:p>`;
-        } else {
-            return `<w:p><w:r><w:t>${index + 1}. ${item}</w:t></w:r></w:p>`;
-        }
+const createNumberedList = (doc, items) => {
+    const listXml = items.map((item, index) => {
+        return `
+            <w:p>
+                <w:pPr>
+                    <w:numPr>
+                        <w:ilvl w:val="0"/>
+                        <w:numId w:val="1"/>
+                    </w:numPr>
+                </w:pPr>
+                <w:r>
+                    <w:t>${item.highlighted ? `[${item.text}]` : item}</w:t>
+                </w:r>
+            </w:p>`;
     }).join('');
-};
+    return new dom().parseFromString(listXml, 'text/xml').documentElement;
+}
 
 const replacePlaceholder = (documentContent, jsonContent) => {
-    const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+    const doc = new dom().parseFromString(documentContent, 'text/xml');
     const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
     const tags = JSON.parse(jsonContent);
 
     select("//w:sdt", doc).forEach(node => {
         var tagNode = select('.//w:tag/@w:val', node)[0];
+
         if (tagNode) {
             const tagName = tagNode.value;
             if (tags.hasOwnProperty(tagName)) {
                 const textNodes = select('.//w:t', node);
                 if (textNodes.length > 0) {
-                    const newTextContent = typeof tags[tagName] === 'object' ? createNumberedList(tags[tagName]) : tags[tagName];
-                    const newContent = new DOMParser().parseFromString(`<root>${newTextContent}</root>`, 'text/xml');
-                    const newNodes = select('.//root/*', newContent);
-                    textNodes.forEach((textNode, index) => {
-                        if (index === 0) {
-                            textNode.parentNode.replaceChild(newNodes[0], textNode);
-                        } else {
-                            textNode.parentNode.removeChild(textNode);
-                        }
-                    });
-                    for (let i = 1; i < newNodes.length; i++) {
-                        textNodes[0].parentNode.parentNode.appendChild(newNodes[i]);
+                    if (Array.isArray(tags[tagName])) {
+                        const listNode = createNumberedList(doc, tags[tagName]);
+                        node.parentNode.replaceChild(listNode, node);
+                    } else {
+                        textNodes.forEach(textNode => {
+                            textNode.textContent = tags[tagName];
+                        });
                     }
                 }
             }
         }
     });
-
-    const serializer = new XMLSerializer();
+    const serializer = new xmlSerializer();
     return serializer.serializeToString(doc);
 };
 
 const zipFilePath = './Test Document.docx';
 const fileName = 'word/document.xml';
 const jsonPath = './myoutput.json';
+const content = readZipFile(zipFilePath, fileName);
+
 const documentContent = readZipFile(zipFilePath, fileName);
 const jsonContent = fs.readFileSync(jsonPath, 'utf8');
+
 const updatedContent = replacePlaceholder(documentContent, jsonContent);
 writeZipFile(zipFilePath, fileName, updatedContent);
 
