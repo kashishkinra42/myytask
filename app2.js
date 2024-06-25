@@ -1,107 +1,41 @@
-const express = require('express');
+upload.js
+
 const fs = require('fs');
-const multer = require('multer');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
+const path = require('path');
+const axios = require('axios');
+const FormData = require('form-data');
 
-const app = express();
-const upload = multer({ dest: 'uploads/' });
+// Replace with the path to your Word document
+const filePath = path.join(__dirname, 'your-document.docx');
+const url = 'http://localhost:3000/extract-tags';
 
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-const extractContentControlTags = async (filePath) => {
+async function uploadDocument() {
   try {
-    const data = fs.readFileSync(filePath);
-    const zip = await JSZip.loadAsync(data);
-    const documentXml = await zip.file('word/document.xml').async('text');
-    const parser = new xml2js.Parser();
-    const tags = {};
+    const form = new FormData();
+    form.append('file', fs.createReadStream(filePath));
 
-    parser.parseString(documentXml, (err, result) => {
-      if (err) {
-        throw err;
-      }
-
-      const body = result['w:document']['w:body'][0];
-
-      function traverseNodes(node) {
-        if (node['w:sdt']) {
-          node['w:sdt'].forEach(sdt => {
-            const tag = sdt['w:sdtPr'][0]['w:tag'];
-            if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
-              const tagName = tag[0]['$']['w:val'];
-              const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-              if (tagValue.trim() !== '') {
-                tags[tagName] = tagValue;
-              }
-            }
-          });
-        }
-        Object.values(node).forEach(value => {
-          if (Array.isArray(value)) {
-            value.forEach(child => traverseNodes(child));
-          }
-        });
-      }
-
-      function extractTagValue(content) {
-        let text = '';
-        function traverseContent(contentNode) {
-          if (contentNode['w:t']) {
-            contentNode['w:t'].forEach(textNode => {
-              if (typeof textNode === 'string') {
-                text += textNode;
-              } else if (textNode['_']) {
-                text += textNode['_'];
-              }
-            });
-          }
-          Object.values(contentNode).forEach(value => {
-            if (Array.isArray(value)) {
-              value.forEach(child => traverseContent(child));
-            }
-          });
-        }
-        traverseContent(content);
-        return text;
-      }
-      traverseNodes(body);
+    const response = await axios.post(url, form, {
+      headers: {
+        ...form.getHeaders(),
+      },
     });
 
-    return tags;
+    console.log(`Status: ${response.status}`);
+    console.log('Response:', response.data);
   } catch (error) {
-    console.error('Error:', error);
-    throw error;
+    console.error('Error uploading document:', error.message);
   }
-};
+}
 
-app.post('/extract-tags', upload.single('file'), async (req, res) => {
-  log(`Received file for extraction: ${req.file.path}`);
-  const filePath = req.file.path;
-
-  try {
-    const tags = await extractContentControlTags(filePath);
-    const jsonFilePath = './myoutput.json';
-    fs.writeFileSync(jsonFilePath, JSON.stringify(tags, null, 2));
-    res.status(200).send(`Tags extracted successfully. Saved as ${jsonFilePath}`);
-  } catch (error) {
-    console.error('Error extracting tags:', error);
-    res.status(500).send('Internal Server Error');
-  } finally {
-    fs.unlinkSync(filePath); // Clean up the uploaded file
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  log(`Server is running on port ${PORT}`);
-});
+uploadDocument();
 
 
-///-------------
 
+----------------------------------------------------------
+
+
+
+  app2.js
 const express = require('express');
 const fs = require('fs');
 const multer = require('multer');
@@ -203,3 +137,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`Server is running on port ${PORT}`);
 });
+
