@@ -57,10 +57,12 @@ const updatedContent = replacePlaceholder(documentContent, jsonContent);
 writeZipFile(zipFilePath, fileName, updatedContent);
 
 console.log('Document updated successfully');
+======================================
 
-==================
-    ===================
-    ======================
+=================================
+
+
+    =================
 
 const fs = require('fs');
 const AdmZip = require('adm-zip');
@@ -79,7 +81,7 @@ const writeZipFile = (zipFilePath, fileName, content) => {
     const zip = new AdmZip(zipFilePath);
     zip.updateFile(fileName, Buffer.from(content, 'utf8'));
     zip.writeZip(zipFilePath);
-}
+};
 
 const createTextNode = (doc, text, highlighted = false) => {
     const runNode = doc.createElement('w:r');
@@ -99,6 +101,7 @@ const createTextNode = (doc, text, highlighted = false) => {
 const createListNode = (doc, items) => {
     return items.map((item, index) => {
         const pNode = doc.createElement('w:p');
+        
         const pPrNode = doc.createElement('w:pPr');
         const numPrNode = doc.createElement('w:numPr');
         const numIdNode = doc.createElement('w:numId');
@@ -111,9 +114,9 @@ const createListNode = (doc, items) => {
         pNode.appendChild(pPrNode);
 
         if (typeof item === 'string') {
-            pNode.appendChild(createTextNode(doc, item));
+            pNode.appendChild(createTextNode(doc, `${index + 1}. ${item}`));
         } else if (typeof item === 'object' && item.text) {
-            pNode.appendChild(createTextNode(doc, item.text, item.highlighted));
+            pNode.appendChild(createTextNode(doc, `${index + 1}. ${item.text}`, item.highlighted));
         }
         return pNode;
     });
@@ -130,7 +133,9 @@ const replacePlaceholder = (documentContent, jsonContent) => {
             const tagName = tagNode.value;
             if (tags.hasOwnProperty(tagName)) {
                 const contentNode = select('.//w:sdtContent', node)[0];
-                contentNode.textContent = ''; // Clear existing content
+                while (contentNode.firstChild) {
+                    contentNode.removeChild(contentNode.firstChild); // Clear existing content
+                }
 
                 const tagValue = tags[tagName];
 
@@ -164,3 +169,9 @@ const updatedContent = replacePlaceholder(documentContent, jsonContent);
 writeZipFile(zipFilePath, fileName, updatedContent);
 
 console.log('Document updated successfully');
+
+==================
+    ===================
+    ======================
+
+ent updated successfully');
