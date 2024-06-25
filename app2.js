@@ -49,60 +49,73 @@ const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
 };
 
+const readFileContent = async (filePath) => {
+  return fs.promises.readFile(filePath);
+};
+
+const extractXmlFromZip = async (data) => {
+  const zip = await JSZip.loadAsync(data);
+  return zip.file('word/document.xml').async('text');
+};
+
+const parseXml = async (xmlContent) => {
+  const parser = new xml2js.Parser();
+  return parser.parseStringPromise(xmlContent);
+};
+
+const traverseNodes = (node, tags) => {
+  if (node['w:sdt']) {
+    node['w:sdt'].forEach(sdt => {
+      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
+      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
+      if (tag && tag['$'] && tag['$']['w:val']) {
+        const tagName = tag['$']['w:val'];
+        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
+        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
+        if (tagValue.trim() !== '') {
+          tags[tagName] = tagValue;
+        }
+      }
+    });
+  }
+  Object.values(node).forEach(value => {
+    if (Array.isArray(value)) {
+      value.forEach(child => traverseNodes(child, tags));
+    }
+  });
+};
+
+const extractTagValue = (content) => {
+  let text = '';
+  function traverseContent(contentNode) {
+    if (contentNode['w:t'] && Array.isArray(contentNode['w:t'])) {
+      contentNode['w:t'].forEach(textNode => {
+        if (typeof textNode === 'string') {
+          text += textNode;
+        } else if (textNode['_']) {
+          text += textNode['_'];
+        }
+      });
+    }
+    Object.values(contentNode).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseContent(child));
+      }
+    });
+  }
+  traverseContent(content);
+  return text;
+};
+
 const extractContentControlTags = async (filePath) => {
   try {
-    const data = fs.readFileSync(filePath);
-    const zip = await JSZip.loadAsync(data);
-    const documentXml = await zip.file('word/document.xml').async('text');
-    const parser = new xml2js.Parser();
+    const data = await readFileContent(filePath);
+    const documentXml = await extractXmlFromZip(data);
+    const xmlParsed = await parseXml(documentXml);
+
     const tags = {};
-
-    await parser.parseStringPromise(documentXml).then((result) => {
-      const body = result['w:document']['w:body'][0];
-
-      function traverseNodes(node) {
-        if (node['w:sdt']) {
-          node['w:sdt'].forEach(sdt => {
-            const tag = sdt['w:sdtPr'][0]['w:tag'];
-            if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
-              const tagName = tag[0]['$']['w:val'];
-              const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-              if (tagValue.trim() !== '') {
-                tags[tagName] = tagValue;
-              }
-            }
-          });
-        }
-        Object.values(node).forEach(value => {
-          if (Array.isArray(value)) {
-            value.forEach(child => traverseNodes(child));
-          }
-        });
-      }
-
-      function extractTagValue(content) {
-        let text = '';
-        function traverseContent(contentNode) {
-          if (contentNode['w:t']) {
-            contentNode['w:t'].forEach(textNode => {
-              if (typeof textNode === 'string') {
-                text += textNode;
-              } else if (textNode['_']) {
-                text += textNode['_'];
-              }
-            });
-          }
-          Object.values(contentNode).forEach(value => {
-            if (Array.isArray(value)) {
-              value.forEach(child => traverseContent(child));
-            }
-          });
-        }
-        traverseContent(content);
-        return text;
-      }
-      traverseNodes(body);
-    });
+    const body = xmlParsed['w:document']['w:body'][0];
+    traverseNodes(body, tags);
 
     return tags;
   } catch (error) {
@@ -137,4 +150,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`Server is running on port ${PORT}`);
 });
-
