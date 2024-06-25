@@ -200,7 +200,12 @@ function extractTagValue(content) {
 
   traverseContent(content);
 
-  return listItems.length > 0 ? listItems : text;
+  if (listItems.length > 0) {
+    // Format list items as an array of strings
+    return listItems.map((item, index) => `${index + 1}. ${item}\n`);
+  } else {
+    return text;
+  }
 }
 
 function saveTagsToFile(tags, outputPath) {
@@ -210,6 +215,7 @@ function saveTagsToFile(tags, outputPath) {
 
 const fpath = './Test Document.docx';
 extractContentControlTags(fpath);
+
 
 
 ==================
