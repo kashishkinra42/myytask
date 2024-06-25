@@ -156,53 +156,59 @@ function extractTagsFromBody(body) {
   return tags;
 }
 
+// Updated extractTagValue function to handle list items and text nodes separately
 function extractTagValue(content) {
   let text = '';
   let listItems = [];
 
   function traverseContent(contentNode) {
-    if (contentNode['w:p'] && contentNode['w:p'][0]['w:pPr'] && contentNode['w:p'][0]['w:pPr'][0]['w:numPr']) {
-      // Detect a numbered list item
-      const listItem = extractTextFromNode(contentNode);
-      if (listItem.trim() !== '') {
-        listItems.push(listItem);
-      }
-    } else if (contentNode['w:t']) {
-      // Regular text node
-      contentNode['w:t'].forEach(textNode => {
-        if (typeof textNode === 'string') {
-          text += textNode;
-        } else if (textNode['_']) {
-          text += textNode['_'];
+    if (contentNode['w:p']) { // Check if contentNode contains paragraphs (w:p)
+      contentNode['w:p'].forEach(pNode => { // Iterate over each paragraph node
+        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) { // Check if paragraph has numbering properties
+          // Detect a numbered list item
+          const listItem = extractTextFromNode(pNode); // Extract text from the paragraph node
+          if (listItem.trim() !== '') {
+            listItems.push(listItem); // Add to listItems array
+          }
+        } else {
+          // Regular text node
+          const pText = extractTextFromNode(pNode); // Extract text from the paragraph node
+          if (pText.trim() !== '') {
+            text += pText; // Append to text
+          }
         }
       });
     }
     Object.values(contentNode).forEach(value => {
       if (Array.isArray(value)) {
-        value.forEach(child => traverseContent(child));
+        value.forEach(child => traverseContent(child)); // Recursively process child nodes
       }
     });
   }
 
-  function extractTextFromNode(node) {
+  function extractTextFromNode(node) { // Helper function to extract text from a node
     let nodeText = '';
-    if (node['w:t']) {
-      node['w:t'].forEach(textNode => {
-        if (typeof textNode === 'string') {
-          nodeText += textNode;
-        } else if (textNode['_']) {
-          nodeText += textNode['_'];
+    if (node['w:r']) { // Check if node contains runs (w:r)
+      node['w:r'].forEach(rNode => { // Iterate over each run node
+        if (rNode['w:t']) { // Check if run contains text (w:t)
+          rNode['w:t'].forEach(textNode => { // Iterate over each text node
+            if (typeof textNode === 'string') {
+              nodeText += textNode; // Append text to nodeText
+            } else if (textNode['_']) {
+              nodeText += textNode['_']; // Append text to nodeText
+            }
+          });
         }
       });
     }
     return nodeText;
   }
 
-  traverseContent(content);
+  traverseContent(content); // Traverse the content node
 
   if (listItems.length > 0) {
-    // Format list items as an array of strings
-    return listItems.map((item, index) => `${index + 1}. ${item}\n`);
+    // Return list items as an array of strings
+    return listItems;
   } else {
     return text;
   }
