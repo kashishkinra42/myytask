@@ -137,7 +137,9 @@ function extractTagsFromBody(body) {
         if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          if (tagValue.trim() !== '') {
+          if (typeof tagValue === 'string' && tagValue.trim() !== '') {
+            tags[tagName] = tagValue;
+          } else if (Array.isArray(tagValue) && tagValue.length > 0) {
             tags[tagName] = tagValue;
           }
         }
@@ -159,11 +161,12 @@ function extractTagValue(content) {
   let listItems = [];
 
   function traverseContent(contentNode) {
-    if (contentNode['w:numPr']) {
+    if (contentNode['w:p'] && contentNode['w:p'][0]['w:pPr'] && contentNode['w:p'][0]['w:pPr'][0]['w:numPr']) {
       // Detect a numbered list item
-      const numId = contentNode['w:numPr'][0]['w:numId'][0]['$']['w:val'];
       const listItem = extractTextFromNode(contentNode);
-      listItems.push(listItem);
+      if (listItem.trim() !== '') {
+        listItems.push(listItem);
+      }
     } else if (contentNode['w:t']) {
       // Regular text node
       contentNode['w:t'].forEach(textNode => {
@@ -207,4 +210,3 @@ function saveTagsToFile(tags, outputPath) {
 
 const fpath = './Test Document.docx';
 extractContentControlTags(fpath);
-
