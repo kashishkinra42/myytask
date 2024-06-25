@@ -1,0 +1,83 @@
+app.js
+
+const express = require('express');
+const fs = require('fs');
+
+const app = express();
+app.use(express.json());
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+app.post('/update-document', (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const templateFilePath = './Test Document.docx';
+  const jsonContent = req.body;
+
+  fs.copyFileSync(templateFilePath, `./updated_${new Date().getTime()}.docx`);
+  res.status(200).send(`Document copied successfully`);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  log(`Server is running on port ${PORT}`);
+});
+
+
+
+postdata.js
+
+const fs = require('fs');
+const axios = require('axios');
+const AdmZip = require('adm-zip');
+const xpath = require('xpath');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+
+// Read JSON content from output.json
+const jsonData = JSON.parse(fs.readFileSync('myoutput.json', 'utf8'));
+
+// Define the URL of your server endpoint
+const url = 'http://localhost:3000/update-document';
+
+// Post the JSON content to the server
+axios.post(url, jsonData)
+  .then(response => {
+    console.log(`Status: ${response.status}`);
+    console.log('Document copied successfully');
+
+    // Get the copied document
+    const docxFilePath = `./updated_${new Date().getTime()}.docx`;
+    const zip = new AdmZip(docxFilePath);
+    const documentContent = zip.readAsText('word/document.xml');
+
+    // Replace placeholders with JSON data
+    const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+    const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
+
+    select("//w:sdt", doc).forEach(node => {
+      const tagNode = select('.//w:tag/@w:val', node)[0];
+      if (tagNode) {
+        const tagName = tagNode.value;
+        const tagValue = jsonData[tagName];
+        if (tagValue !== null && tagValue !== undefined) {
+          const textNodes = select('.//w:t', node);
+          textNodes.forEach(textNode => {
+            textNode.textContent = tagValue;
+          });
+        }
+      }
+    });
+
+    const serializer = new XMLSerializer();
+    const updatedContent = serializer.serializeToString(doc);
+
+    // Update the document with the replaced content
+    zip.updateFile('word/document.xml', Buffer.from(updatedContent, 'utf8'));
+    zip.writeZip(docxFilePath);
+
+    console.log('Document updated successfully');
+  })
+  .catch(error => {
+    console.error('Error posting data:', error.message);
+  });
