@@ -1,14 +1,40 @@
 app.js
+  
 
 const express = require('express');
+const app = express();
+
+app.use(express.json());
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+app.post('/update-document', (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const jsonContent = req.body;
+
+  res.status(200).json({ jsonContent });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  log(`Server is running on port ${PORT}`);
+});
+
+
+
+
+
+postdata.js
+
+
 const fs = require('fs');
+const axios = require('axios');
 const AdmZip = require('adm-zip');
 const xpath = require('xpath');
 const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
 const { v4: uuidv4 } = require('uuid');
-
-const app = express();
-app.use(express.json());
 
 const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
@@ -65,38 +91,6 @@ const replacePlaceholder = (documentContent, jsonContent) => {
   return updatedContent;
 };
 
-app.post('/update-document', (req, res) => {
-  log(`Received JSON: ${JSON.stringify(req.body)}`);
-  const templateFilePath = './Test Document.docx';
-  const fileName = 'word/document.xml';
-  const jsonContent = req.body;
-
-  try {
-    const newFileName = `./updated_${uuidv4()}.docx`;
-    fs.copyFileSync(templateFilePath, newFileName);
-
-    const documentContent = readZipFile(newFileName, fileName);
-    const updatedContent = replacePlaceholder(documentContent, jsonContent);
-    writeZipFile(newFileName, fileName, updatedContent);
-
-    res.status(200).send(`Document updated successfully. Saved as ${newFileName}`);
-  } catch (error) {
-    console.error('Error updating document:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  log(`Server is running on port ${PORT}`);
-});
-
-
-postdata.js
-
-const fs = require('fs');
-const axios = require('axios');
-
 // Read JSON content from output.json
 const jsonData = JSON.parse(fs.readFileSync('myoutput.json', 'utf8'));
 
@@ -106,8 +100,22 @@ const url = 'http://localhost:3000/update-document';
 // Post the JSON content to the server
 axios.post(url, jsonData)
   .then(response => {
-    console.log(`Status: ${response.status}`);
-    console.log('Document updated successfully');
+    log(`Status: ${response.status}`);
+    log('Received response from server');
+
+    const { jsonContent } = response.data;
+
+    const templateFilePath = './Test Document.docx';
+    const fileName = 'word/document.xml';
+
+    const newFileName = `./updated_${uuidv4()}.docx`;
+    fs.copyFileSync(templateFilePath, newFileName);
+
+    const documentContent = readZipFile(newFileName, fileName);
+    const updatedContent = replacePlaceholder(documentContent, jsonContent);
+    writeZipFile(newFileName, fileName, updatedContent);
+
+    log(`Document updated successfully. Saved as ${newFileName}`);
   })
   .catch(error => {
     console.error('Error posting data:', error.message);
