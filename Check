@@ -1,9 +1,6 @@
-app.js
-
 const express = require('express');
-const fs = require('fs');
-
 const app = express();
+
 app.use(express.json());
 
 const log = (message) => {
@@ -12,11 +9,9 @@ const log = (message) => {
 
 app.post('/update-document', (req, res) => {
   log(`Received JSON: ${JSON.stringify(req.body)}`);
-  const templateFilePath = './Test Document.docx';
   const jsonContent = req.body;
 
-  fs.copyFileSync(templateFilePath, `./updated_${new Date().getTime()}.docx`);
-  res.status(200).send(`Document copied successfully`);
+  res.status(200).json({ jsonContent });
 });
 
 const PORT = process.env.PORT || 3000;
@@ -26,13 +21,68 @@ app.listen(PORT, () => {
 
 
 
-postdata.js
 
 const fs = require('fs');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
 const xpath = require('xpath');
 const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const { v4: uuidv4 } = require('uuid');
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+const readZipFile = (zipFilePath, fileName) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(fileName);
+  const content = zipEntry.getData().toString('utf8');
+  return content;
+};
+
+const writeZipFile = (zipFilePath, fileName, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
+
+const replacePlaceholder = (documentContent, jsonContent) => {
+  log(`Entering replacePlaceholder`);
+  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
+
+  select("//w:sdt", doc).forEach(node => {
+    const tagNode = select('.//w:tag/@w:val', node)[0];
+    if (tagNode) {
+      const tagName = tagNode.value;
+      log(`Processing tag: ${tagName}`);
+      const tagValue = jsonContent[tagName];
+      
+      if (tagValue !== null && tagValue !== undefined) {
+        log(`Found value for ${tagName}: ${tagValue}`);
+        const textNodes = select('.//w:t', node);
+        
+        if (textNodes.length > 0) {
+          log(`Replacing text nodes for tag: ${tagName}`);
+          textNodes.forEach(textNode => {
+            textNode.textContent = tagValue;
+          });
+        } else {
+          log(`No text nodes found for tag: ${tagName}`);
+        }
+      } else {
+        log(`No value found for tag: ${tagName}`);
+      }
+    } else {
+      log(`No tagNode found in node`);
+    }
+  });
+  
+  const serializer = new XMLSerializer();
+  const updatedContent = serializer.serializeToString(doc);
+  log(`Exiting replacePlaceholder`);
+  return updatedContent;
+};
 
 // Read JSON content from output.json
 const jsonData = JSON.parse(fs.readFileSync('myoutput.json', 'utf8'));
@@ -43,40 +93,22 @@ const url = 'http://localhost:3000/update-document';
 // Post the JSON content to the server
 axios.post(url, jsonData)
   .then(response => {
-    console.log(`Status: ${response.status}`);
-    console.log('Document copied successfully');
+    log(`Status: ${response.status}`);
+    log('Received response from server');
 
-    // Get the copied document
-    const docxFilePath = `./updated_${new Date().getTime()}.docx`;
-    const zip = new AdmZip(docxFilePath);
-    const documentContent = zip.readAsText('word/document.xml');
+    const { jsonContent } = response.data;
 
-    // Replace placeholders with JSON data
-    const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
-    const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
+    const templateFilePath = './Test Document.docx';
+    const fileName = 'word/document.xml';
 
-    select("//w:sdt", doc).forEach(node => {
-      const tagNode = select('.//w:tag/@w:val', node)[0];
-      if (tagNode) {
-        const tagName = tagNode.value;
-        const tagValue = jsonData[tagName];
-        if (tagValue !== null && tagValue !== undefined) {
-          const textNodes = select('.//w:t', node);
-          textNodes.forEach(textNode => {
-            textNode.textContent = tagValue;
-          });
-        }
-      }
-    });
+    const newFileName = `./updated_${uuidv4()}.docx`;
+    fs.copyFileSync(templateFilePath, newFileName);
 
-    const serializer = new XMLSerializer();
-    const updatedContent = serializer.serializeToString(doc);
+    const documentContent = readZipFile(newFileName, fileName);
+    const updatedContent = replacePlaceholder(documentContent, jsonContent);
+    writeZipFile(newFileName, fileName, updatedContent);
 
-    // Update the document with the replaced content
-    zip.updateFile('word/document.xml', Buffer.from(updatedContent, 'utf8'));
-    zip.writeZip(docxFilePath);
-
-    console.log('Document updated successfully');
+    log(`Document updated successfully. Saved as ${newFileName}`);
   })
   .catch(error => {
     console.error('Error posting data:', error.message);
