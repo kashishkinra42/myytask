@@ -263,3 +263,41 @@ const handleUpload = async (filePath) => {
 
 module.exports = handleUpload;
 
+=========================================================
+============================================================
+======================================================
+
+
+
+{
+  "Incident Number": "1234",
+  "Date": "6/13/2024",
+  "Authors": "Kashish kinraa",
+  "Status": "Mitigated",
+  "Summary": "This is the root cause",
+  "Impact": "This is the impact This is the impact",
+  "Root Causes": "This is the root cause",
+  "Trigger": "Hellohi",
+  "Change(s) that triggered the incident": "Hello hiHellohi",
+  "Resolution": "Hello hhi",
+  "Detection": "Helloi",
+  "Incident Theme": "Choose an item.",
+  "Link to the latest ORR": "Hello hilohi",
+  "SLO Impact": "Hello hi",
+  "What Went Well": "Kash",
+  "What Went Wrong": "Click or tap here to enter text.",
+  "Where We Got Lucky": [
+    " Kash",
+    "Kinra",
+    {
+      "text": "My name",
+      "highlighted": true
+    },
+    {
+      "text": "Heloo",
+      "highlighted": true
+    },
+    "yes"
+  ],
+  "F2": "Click or tap here to enter text."
+}
