@@ -62,8 +62,7 @@ console.log('Document updated successfully');
     ===================
     ======================
 
-
-    const fs = require('fs');
+const fs = require('fs');
 const AdmZip = require('adm-zip');
 const xpath = require('xpath');
 const dom = require('@xmldom/xmldom').DOMParser;
@@ -98,21 +97,23 @@ const createTextNode = (doc, text, highlighted = false) => {
 };
 
 const createListNode = (doc, items) => {
-    const numberingNode = doc.createElement('w:numPr');
-    const numIdNode = doc.createElement('w:numId');
-    numIdNode.setAttribute('w:val', '1');
-    numberingNode.appendChild(numIdNode);
-
     return items.map((item, index) => {
         const pNode = doc.createElement('w:p');
         const pPrNode = doc.createElement('w:pPr');
-        pPrNode.appendChild(numberingNode.cloneNode(true));
+        const numPrNode = doc.createElement('w:numPr');
+        const numIdNode = doc.createElement('w:numId');
+        numIdNode.setAttribute('w:val', '1');
+        const ilvlNode = doc.createElement('w:ilvl');
+        ilvlNode.setAttribute('w:val', '0');
+        numPrNode.appendChild(ilvlNode);
+        numPrNode.appendChild(numIdNode);
+        pPrNode.appendChild(numPrNode);
         pNode.appendChild(pPrNode);
 
         if (typeof item === 'string') {
-            pNode.appendChild(createTextNode(doc, `${index + 1}. ${item}`));
+            pNode.appendChild(createTextNode(doc, item));
         } else if (typeof item === 'object' && item.text) {
-            pNode.appendChild(createTextNode(doc, `${index + 1}. ${item.text}`, item.highlighted));
+            pNode.appendChild(createTextNode(doc, item.text, item.highlighted));
         }
         return pNode;
     });
@@ -163,4 +164,3 @@ const updatedContent = replacePlaceholder(documentContent, jsonContent);
 writeZipFile(zipFilePath, fileName, updatedContent);
 
 console.log('Document updated successfully');
-
