@@ -124,6 +124,7 @@ module.exports = { processDocument };
 app.jsss
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
 const { processDocument } = require('./postdata');
 const app = express();
 
@@ -139,14 +140,14 @@ app.post('/update-document', async (req, res) => {
 
   try {
     const updatedFilePath = await processDocument(jsonContent);
-    
-    res.setHeader('Content-Disposition', `attachment; filename=updated_document.docx`);
+
+    res.setHeader('Content-Disposition', `attachment; filename="updated_document.docx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    
+
     const fileStream = fs.createReadStream(updatedFilePath);
     fileStream.pipe(res);
 
-    fileStream.on('end', () => {
+    fileStream.on('finish', () => {
       // Clean up the file after sending it
       fs.unlink(updatedFilePath, (unlinkErr) => {
         if (unlinkErr) {
@@ -154,6 +155,12 @@ app.post('/update-document', async (req, res) => {
         }
       });
     });
+
+    fileStream.on('error', (err) => {
+      console.error('Error reading file:', err);
+      res.status(500).send('Error reading file');
+    });
+
   } catch (error) {
     console.error('Error processing document:', error);
     res.status(500).send('Error processing document');
@@ -164,4 +171,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`Server is running on port ${PORT}`);
 });
-
