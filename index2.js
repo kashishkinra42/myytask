@@ -321,8 +321,8 @@ console.log('Document updated successfully');
 
 const fs = require('fs');
 const AdmZip = require('adm-zip');
-const xpath = require('xpath');
-const dom = require('@xmldom/xmldom').DOMParser;
+var xpath = require('xpath');
+var dom = require('@xmldom/xmldom').DOMParser;
 const xmlSerializer = require('@xmldom/xmldom').XMLSerializer;
 
 const readZipFile = (zipFilePath, fileName) => {
@@ -379,20 +379,24 @@ const replacePlaceholder = (documentContent, jsonContent) => {
 
                     // Add new text nodes and line breaks
                     for (let i = 1; i < processedValues.length; i++) {
+                        const newParagraph = doc.createElement('w:p');
+                        const newRun = doc.createElement('w:r');
                         const newTextNode = doc.createElement('w:t');
                         newTextNode.textContent = processedValues[i].text;
-                        
+
                         if (processedValues[i].highlighted) {
                             const runProperties = doc.createElement('w:rPr');
                             const highlightNode = doc.createElement('w:highlight');
                             highlightNode.setAttribute('w:val', 'yellow'); // Change to desired highlight color
                             runProperties.appendChild(highlightNode);
-                            newTextNode.insertBefore(runProperties, newTextNode.firstChild);
+                            newRun.appendChild(runProperties);
                         }
-                        
-                        textNodes[0].parentNode.appendChild(newTextNode);
+
+                        newRun.appendChild(newTextNode);
+                        newParagraph.appendChild(newRun);
+                        node.parentNode.insertBefore(newParagraph, node.nextSibling);
                     }
-                    
+
                     // Highlight the first text node if necessary
                     if (processedValues[0].highlighted) {
                         const runProperties = doc.createElement('w:rPr');
