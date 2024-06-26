@@ -141,9 +141,11 @@ app.post('/update-document', async (req, res) => {
   try {
     const updatedFilePath = await processDocument(jsonContent);
 
-    res.setHeader('Content-Disposition', `attachment; filename="updated_document.docx"`);
+    // Ensure the filename is correctly set to prompt a download
+    res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
+    // Stream the file to the response
     const fileStream = fs.createReadStream(updatedFilePath);
     fileStream.pipe(res);
 
