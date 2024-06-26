@@ -119,3 +119,49 @@ const processDocument = async (jsonContent) => {
 };
 
 module.exports = { processDocument };
+
+
+app.jsss
+const express = require('express');
+const fs = require('fs');
+const { processDocument } = require('./postdata');
+const app = express();
+
+app.use(express.json());
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+app.post('/update-document', async (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const jsonContent = req.body;
+
+  try {
+    const updatedFilePath = await processDocument(jsonContent);
+    
+    res.setHeader('Content-Disposition', `attachment; filename=updated_document.docx`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    
+    const fileStream = fs.createReadStream(updatedFilePath);
+    fileStream.pipe(res);
+
+    fileStream.on('end', () => {
+      // Clean up the file after sending it
+      fs.unlink(updatedFilePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting file:', unlinkErr);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error processing document:', error);
+    res.status(500).send('Error processing document');
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  log(`Server is running on port ${PORT}`);
+});
+
