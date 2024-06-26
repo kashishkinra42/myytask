@@ -206,9 +206,10 @@ app.post('/extract-tags', upload.single('file'), async (req, res) => {
     res.status(200).json(tags);
   } catch (error) {
     console.error('Error extracting tags:', error);
-    res.status(500).send('Internal Server Error');
+    res.status(500).send('Error extracting tags');
   } finally {
-    fs.unlinkSync(filePath); // Clean up the uploaded file
+    // Always clean up the uploaded file
+    fs.unlinkSync(filePath);
   }
 });
 
