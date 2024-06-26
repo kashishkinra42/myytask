@@ -124,7 +124,6 @@ module.exports = { processDocument };
 app.jsss
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 const { processDocument } = require('./postdata');
 const app = express();
 
@@ -141,15 +140,12 @@ app.post('/update-document', async (req, res) => {
   try {
     const updatedFilePath = await processDocument(jsonContent);
 
-    // Ensure the filename is correctly set to prompt a download
     res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
-    // Stream the file to the response
     const fileStream = fs.createReadStream(updatedFilePath);
-    fileStream.pipe(res);
 
-    fileStream.on('finish', () => {
+    fileStream.pipe(res).on('finish', () => {
       // Clean up the file after sending it
       fs.unlink(updatedFilePath, (unlinkErr) => {
         if (unlinkErr) {
