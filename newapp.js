@@ -26,6 +26,7 @@ app.listen(PORT, () => {
 
 postdata.js
 
+
 const fs = require('fs');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
@@ -94,14 +95,20 @@ axios.post(url, jsonData, {
     log(`Status: ${response.status}`);
     log('Received response from server');
 
-    const { data } = response; // Binary data of the updated document
+    const { data, headers } = response; // Destructure headers from response
 
     // Set the content disposition to inline to display the document in Postman
     const updatedFileName = `updated_${uuidv4()}.docx`;
     const contentDisposition = `attachment; filename="${updatedFileName}"`;
 
-    // Return the data with appropriate headers
+    // Output headers and data to console
     console.log(headers);
+    console.log(data); // This should output the binary content of the updated document
+  })
+  .catch(error => {
+    console.error('Error posting data:', error.message);
+  });
+
     console.log(data); // This should output the binary content of the updated document
   })
   .catch(error => {
