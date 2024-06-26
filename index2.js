@@ -193,49 +193,44 @@ const writeZipFile = (zipFilePath, fileName, content) => {
     zip.writeZip(zipFilePath);
 }
 
-const createNumberedList = (doc, items) => {
-    const listXml = items.map((item, index) => {
-        return `
-            <w:p>
-                <w:pPr>
-                    <w:numPr>
-                        <w:ilvl w:val="0"/>
-                        <w:numId w:val="1"/>
-                    </w:numPr>
-                </w:pPr>
-                <w:r>
-                    <w:t>${item.highlighted ? `[${item.text}]` : item}</w:t>
-                </w:r>
-            </w:p>`;
-    }).join('');
-    return new dom().parseFromString(listXml, 'text/xml').documentElement;
-}
-
 const replacePlaceholder = (documentContent, jsonContent) => {
     const doc = new dom().parseFromString(documentContent, 'text/xml');
     const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
     const tags = JSON.parse(jsonContent);
 
+    const processTagValue = (value) => {
+        if (Array.isArray(value)) {
+            return value.map(item => {
+                if (typeof item === 'string') {
+                    return item;
+                } else if (typeof item === 'object' && item.text) {
+                    return item.highlighted ? `**${item.text}**` : item.text;
+                }
+                return '';
+            }).join(', ');
+        } else if (typeof value === 'object' && value.text) {
+            return value.highlighted ? `**${value.text}**` : value.text;
+        }
+        return value;
+    };
+
     select("//w:sdt", doc).forEach(node => {
         var tagNode = select('.//w:tag/@w:val', node)[0];
 
-        if (tagNode) {
+        if(tagNode){
             const tagName = tagNode.value;
-            if (tags.hasOwnProperty(tagName)) {
+            if(tags.hasOwnProperty(tagName)){
                 const textNodes = select('.//w:t', node);
-                if (textNodes.length > 0) {
-                    if (Array.isArray(tags[tagName])) {
-                        const listNode = createNumberedList(doc, tags[tagName]);
-                        node.parentNode.replaceChild(listNode, node);
-                    } else {
-                        textNodes.forEach(textNode => {
-                            textNode.textContent = tags[tagName];
-                        });
-                    }
+                if(textNodes.length >0){
+                    const processedValue = processTagValue(tags[tagName]);
+                    textNodes.forEach(textNode => {
+                        textNode.textContent = processedValue;
+                    });
                 }
             }
         }
     });
+
     const serializer = new xmlSerializer();
     return serializer.serializeToString(doc);
 };
