@@ -321,8 +321,8 @@ console.log('Document updated successfully');
 
 const fs = require('fs');
 const AdmZip = require('adm-zip');
-var xpath = require('xpath');
-var dom = require('@xmldom/xmldom').DOMParser;
+const xpath = require('xpath');
+const dom = require('@xmldom/xmldom').DOMParser;
 const xmlSerializer = require('@xmldom/xmldom').XMLSerializer;
 
 const readZipFile = (zipFilePath, fileName) => {
@@ -379,7 +379,6 @@ const replacePlaceholder = (documentContent, jsonContent) => {
 
                     // Add new text nodes and line breaks
                     for (let i = 1; i < processedValues.length; i++) {
-                        const breakNode = doc.createElement('w:br');
                         const newTextNode = doc.createElement('w:t');
                         newTextNode.textContent = processedValues[i].text;
                         
@@ -388,10 +387,9 @@ const replacePlaceholder = (documentContent, jsonContent) => {
                             const highlightNode = doc.createElement('w:highlight');
                             highlightNode.setAttribute('w:val', 'yellow'); // Change to desired highlight color
                             runProperties.appendChild(highlightNode);
-                            newTextNode.parentNode.insertBefore(runProperties, newTextNode);
+                            newTextNode.insertBefore(runProperties, newTextNode.firstChild);
                         }
                         
-                        textNodes[0].parentNode.appendChild(breakNode);
                         textNodes[0].parentNode.appendChild(newTextNode);
                     }
                     
