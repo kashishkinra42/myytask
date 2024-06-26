@@ -143,20 +143,20 @@ app.post('/update-document', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
-    const fileStream = fs.createReadStream(updatedFilePath);
+    fs.readFile(updatedFilePath, (err, data) => {
+      if (err) {
+        console.error('Error reading file:', err);
+        return res.status(500).send('Error reading file');
+      }
 
-    fileStream.pipe(res).on('finish', () => {
+      res.status(200).send(data);
+
       // Clean up the file after sending it
       fs.unlink(updatedFilePath, (unlinkErr) => {
         if (unlinkErr) {
           console.error('Error deleting file:', unlinkErr);
         }
       });
-    });
-
-    fileStream.on('error', (err) => {
-      console.error('Error reading file:', err);
-      res.status(500).send('Error reading file');
     });
 
   } catch (error) {
