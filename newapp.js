@@ -1,9 +1,6 @@
 app.js
   
-
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const { processDocument } = require('./postdata');
 const app = express();
 
@@ -14,27 +11,27 @@ const log = (message) => {
 };
 
 app.post('/update-document', async (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const jsonContent = req.body;
+
   try {
-    log(`Received JSON: ${JSON.stringify(req.body)}`);
-    const jsonContent = req.body;
-
-    // Generate the updated document
-    const updatedDocumentPath = await processDocument(jsonContent);
-
-    // Send the file as a response
-    res.download(updatedDocumentPath, 'updated_document.docx', (err) => {
+    const updatedFilePath = await processDocument(jsonContent);
+    res.download(updatedFilePath, (err) => {
       if (err) {
-        log(`Error sending file: ${err.message}`);
+        console.error('Error sending file:', err);
         res.status(500).send('Error sending file');
+      } else {
+        log(`Document updated successfully. Sent as ${updatedFilePath}`);
+        // Clean up the file after sending it
+        fs.unlink(updatedFilePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error('Error deleting file:', unlinkErr);
+          }
+        });
       }
-
-      // Clean up the file after sending
-      fs.unlink(updatedDocumentPath, (err) => {
-        if (err) log(`Error deleting file: ${err.message}`);
-      });
     });
   } catch (error) {
-    log(`Error processing document: ${error.message}`);
+    console.error('Error processing document:', error);
     res.status(500).send('Error processing document');
   }
 });
@@ -44,17 +41,14 @@ app.listen(PORT, () => {
   log(`Server is running on port ${PORT}`);
 });
 
-
-
 postdata.js
 
 
 const fs = require('fs');
-const axios = require('axios');
 const AdmZip = require('adm-zip');
-const xpath = require('xpath');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
 const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
 
 const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
@@ -84,11 +78,11 @@ const replacePlaceholder = (documentContent, jsonContent) => {
       const tagName = tagNode.value;
       log(`Processing tag: ${tagName}`);
       const tagValue = jsonContent[tagName];
-
+      
       if (tagValue !== null && tagValue !== undefined) {
         log(`Found value for ${tagName}: ${tagValue}`);
         const textNodes = select('.//w:t', node);
-
+        
         if (textNodes.length > 0) {
           log(`Replacing text nodes for tag: ${tagName}`);
           textNodes.forEach(textNode => {
@@ -104,28 +98,8 @@ const replacePlaceholder = (documentContent, jsonContent) => {
       log(`No tagNode found in node`);
     }
   });
-
+  
   const serializer = new XMLSerializer();
   const updatedContent = serializer.serializeToString(doc);
   log(`Exiting replacePlaceholder`);
-  return updatedContent;
-};
-
-const processDocument = async (jsonContent) => {
-  const templateFilePath = './Test Document.docx';
-  const fileName = 'word/document.xml';
-
-  const newFileName = `./updated_${uuidv4()}.docx`;
-  fs.copyFileSync(templateFilePath, newFileName);
-
-  const documentContent = readZipFile(newFileName, fileName);
-  const updatedContent = replacePlaceholder(documentContent, jsonContent);
-  writeZipFile(newFileName, fileName, updatedContent);
-
-  log(`Document updated successfully. Saved as ${newFileName}`);
-  return newFileName;
-};
-
-module.exports = {
-  processDocument,
-};
+  return
