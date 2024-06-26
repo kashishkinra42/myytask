@@ -43,7 +43,6 @@ app.listen(PORT, () => {
 
 postdata.js
 
-
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
@@ -102,4 +101,21 @@ const replacePlaceholder = (documentContent, jsonContent) => {
   const serializer = new XMLSerializer();
   const updatedContent = serializer.serializeToString(doc);
   log(`Exiting replacePlaceholder`);
-  return
+  return updatedContent;
+};
+
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './Test Document.docx';
+  const fileName = 'word/document.xml';
+
+  const newFileName = `./updated_${uuidv4()}.docx`;
+  fs.copyFileSync(templateFilePath, newFileName);
+
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
+
+  return newFileName;
+};
+
+module.exports = { processDocument };
