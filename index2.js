@@ -327,7 +327,6 @@ writeZipFile(zipFilePath, fileName, updatedContent);
 console.log('Document updated successfully');
 
 ====================
-
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 var xpath = require('xpath');
@@ -353,6 +352,8 @@ const replacePlaceholder = (documentContent, jsonContent) => {
     const tags = JSON.parse(jsonContent);
 
     const createNumberedParagraphs = (doc, value) => {
+        if (!Array.isArray(value)) return [];
+        
         return value.map((item, index) => {
             const p = doc.createElement('w:p');
             const r = doc.createElement('w:r');
