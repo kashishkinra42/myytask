@@ -1,6 +1,10 @@
 app.js
   
+
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const { processDocument } = require('./postdata');
 const app = express();
 
 app.use(express.json());
@@ -9,19 +13,37 @@ const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
 };
 
-app.post('/update-document', (req, res) => {
-  log(`Received JSON: ${JSON.stringify(req.body)}`);
-  const jsonContent = req.body;
+app.post('/update-document', async (req, res) => {
+  try {
+    log(`Received JSON: ${JSON.stringify(req.body)}`);
+    const jsonContent = req.body;
 
-  // Here, you could save the JSON content to a database or perform other operations if needed.
+    // Generate the updated document
+    const updatedDocumentPath = await processDocument(jsonContent);
 
-  res.status(200).json({ jsonContent });
+    // Send the file as a response
+    res.download(updatedDocumentPath, 'updated_document.docx', (err) => {
+      if (err) {
+        log(`Error sending file: ${err.message}`);
+        res.status(500).send('Error sending file');
+      }
+
+      // Clean up the file after sending
+      fs.unlink(updatedDocumentPath, (err) => {
+        if (err) log(`Error deleting file: ${err.message}`);
+      });
+    });
+  } catch (error) {
+    log(`Error processing document: ${error.message}`);
+    res.status(500).send('Error processing document');
+  }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`Server is running on port ${PORT}`);
 });
+
 
 
 postdata.js
@@ -52,6 +74,7 @@ const writeZipFile = (zipFilePath, fileName, content) => {
 };
 
 const replacePlaceholder = (documentContent, jsonContent) => {
+  log(`Entering replacePlaceholder`);
   const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
   const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
 
@@ -59,58 +82,50 @@ const replacePlaceholder = (documentContent, jsonContent) => {
     const tagNode = select('.//w:tag/@w:val', node)[0];
     if (tagNode) {
       const tagName = tagNode.value;
+      log(`Processing tag: ${tagName}`);
       const tagValue = jsonContent[tagName];
-      
+
       if (tagValue !== null && tagValue !== undefined) {
+        log(`Found value for ${tagName}: ${tagValue}`);
         const textNodes = select('.//w:t', node);
-        
+
         if (textNodes.length > 0) {
+          log(`Replacing text nodes for tag: ${tagName}`);
           textNodes.forEach(textNode => {
             textNode.textContent = tagValue;
           });
+        } else {
+          log(`No text nodes found for tag: ${tagName}`);
         }
+      } else {
+        log(`No value found for tag: ${tagName}`);
       }
+    } else {
+      log(`No tagNode found in node`);
     }
   });
-  
+
   const serializer = new XMLSerializer();
   const updatedContent = serializer.serializeToString(doc);
+  log(`Exiting replacePlaceholder`);
   return updatedContent;
 };
 
-// Read JSON content from output.json
-const jsonData = JSON.parse(fs.readFileSync('myoutput.json', 'utf8'));
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './Test Document.docx';
+  const fileName = 'word/document.xml';
 
-// Define the URL of your server endpoint
-const url = 'http://localhost:3000/update-document';
+  const newFileName = `./updated_${uuidv4()}.docx`;
+  fs.copyFileSync(templateFilePath, newFileName);
 
-// Post the JSON content to the server
-axios.post(url, jsonData, {
-  responseType: 'arraybuffer', // Ensure response type is handled as binary
-  headers: {
-    'Content-Type': 'application/json', // Set appropriate content type
-  }
-})
-  .then(response => {
-    log(`Status: ${response.status}`);
-    log('Received response from server');
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
 
-    const { data, headers } = response; // Destructure headers from response
+  log(`Document updated successfully. Saved as ${newFileName}`);
+  return newFileName;
+};
 
-    // Set the content disposition to inline to display the document in Postman
-    const updatedFileName = `updated_${uuidv4()}.docx`;
-    const contentDisposition = `attachment; filename="${updatedFileName}"`;
-
-    // Output headers and data to console
-    console.log(headers);
-    console.log(data); // This should output the binary content of the updated document
-  })
-  .catch(error => {
-    console.error('Error posting data:', error.message);
-  });
-
-    console.log(data); // This should output the binary content of the updated document
-  })
-  .catch(error => {
-    console.error('Error posting data:', error.message);
-  });
+module.exports = {
+  processDocument,
+};
