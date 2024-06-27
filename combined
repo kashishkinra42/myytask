@@ -1,0 +1,75 @@
+const express = require('express');
+const fs = require('fs');
+const upload = multer({ dest: 'uploads/' });
+const { processDocument } = require('./PostData');
+const app = express();
+
+const { extractContentControlTags } = require('./upload.js');
+app.use(express.json());
+
+
+
+
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+app.post('/update-document', async (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const jsonContent = req.body;
+
+  try {
+    const updatedFilePath = await processDocument(jsonContent);
+
+    res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    const fileStream = fs.createReadStream(updatedFilePath);
+
+    fileStream.pipe(res).on('finish', () => {
+      // Clean up the file after sending it
+      fs.unlink(updatedFilePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting file:', unlinkErr);
+        }
+      });
+    });
+
+    fileStream.on('error', (err) => {
+      console.error('Error reading file:', err);
+      res.status(500).send('Error reading file');
+    });
+
+  } catch (error) {
+    console.error('Error processing document:', error);
+    res.status(500).send('Error processing document');
+  }
+});
+
+
+app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
+  // console.log("api called");
+  if (!req.file) {
+    log(`No file received in the request`);
+    return res.status(400).send('No file uploaded');
+  }
+
+  log(`Received file for extraction: ${req.file.path}`);
+  const filePath = req.file.path;
+
+  try {
+    const tags = await extractContentControlTags(filePath);
+    res.status(200).json(tags);
+  } catch (error) {
+    console.error('Error extracting tags:', error);
+    res.status(500).send('Error extracting tags');
+  } finally {
+    fs.unlinkSync(filePath);
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  log(`Server is running on port ${PORT}`);
+});
