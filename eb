@@ -1,104 +1,11 @@
-Here is the code refactored to match the specified path structure:
+To refactor the provided code while maintaining the structure and implementing it in the required format with routes defined and calling respective functions from `controller.js`, follow these steps:
 
-server.js
-javascript
-Copy code
-import express from 'express';
-import multer from 'multer';
-import { log } from './handlers';
-import { handleUpdateDocument, handleExtractTags } from './api/v1/service-now/integrations/handlers';
+1. **Restructure `PostData.js` and `upload.js` to be modular**.
+2. **Create the routes in `server.js` to match the format `/api/v1/service-now/integrations`**.
+3. **Define the controller functions in `controller.js`**.
 
-const app = express();
-const upload = multer({ dest: 'uploads/' });
-
-app.use(express.json());
-
-app.route('/api/v1/service-now/integrations/update-document').post(handleUpdateDocument);
-app.route('/api/v1/service-now/integrations/extract-tags').post(upload.single('Docxfile'), handleExtractTags);
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => log(`Server is running on port ${PORT}`));
-api/v1/service-now/integrations/handlers.js
-javascript
-Copy code
-import fs from 'fs';
-import { processDocument } from './PostData';
-import { extractContentControlTags } from './upload';
-
-export const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-export const handleUpdateDocument = async (req, res) => {
-  log(`Received JSON: ${JSON.stringify(req.body)}`);
-  const jsonContent = req.body;
-
-  try {
-    const updatedFilePath = await processDocument(jsonContent);
-
-    res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-
-    const fileStream = fs.createReadStream(updatedFilePath);
-
-    fileStream.pipe(res).on('finish', () => {
-      fs.unlink(updatedFilePath, (unlinkErr) => {
-        if (unlinkErr) {
-          console.error('Error deleting file:', unlinkErr);
-        }
-      });
-    });
-
-    fileStream.on('error', (err) => {
-      console.error('Error reading file:', err);
-      res.status(500).send('Error reading file');
-    });
-
-  } catch (error) {
-    console.error('Error processing document:', error);
-    res.status(500).send('Error processing document');
-  }
-};
-
-export const handleExtractTags = async (req, res) => {
-  if (!req.file) {
-    log(`No file received in the request`);
-    return res.status(400).send('No file uploaded');
-  }
-
-  log(`Received file for extraction: ${req.file.path}`);
-  const filePath = req.file.path;
-
-  try {
-    const tags = await extractContentControlTags(filePath);
-    res.status(200).json(tags);
-  } catch (error) {
-    console.error('Error extracting tags:', error);
-    res.status(500).send('Error extracting tags');
-  } finally {
-    fs.unlinkSync(filePath);
-  }
-};
-api/v1/service-now/integrations/PostData.js
-javascript
-Copy code
-export const processDocument = async (jsonContent) => {
-  // Implementation of processDocument
-};
-api/v1/service-now/integrations/upload.js
-javascript
-Copy code
-export const extractContentControlTags = async (filePath) => {
-  // Implementation of extractContentControlTags
-};
-  app.route('/api/v1/service-now/integrations/incident/record/push')
-        .post(bodyParser.json({"type" : "*/*"}),controller.sendDataFromSNOW); in this format calling the respective function from controller.js
-ChatGPT
-Here is the refactored code with routes defined in the specified format and calling the respective functions from controller.js:
-
-server.js
-javascript
-Copy code
+### server.js
+```javascript
 import express from 'express';
 import bodyParser from 'body-parser';
 import multer from 'multer';
@@ -118,9 +25,10 @@ app.route('/api/v1/service-now/integrations/extract-tags')
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => log(`Server is running on port ${PORT}`));
-api/v1/service-now/integrations/controller.js
-javascript
-Copy code
+```
+
+### api/v1/service-now/integrations/controller.js
+```javascript
 import fs from 'fs';
 import { processDocument } from './PostData';
 import { extractContentControlTags } from './upload';
@@ -176,15 +84,169 @@ export const handleExtractTags = async (req, res) => {
     fs.unlinkSync(filePath);
   }
 };
-api/v1/service-now/integrations/PostData.js
-javascript
-Copy code
+```
+
+### api/v1/service-now/integrations/PostData.js
+```javascript
+const fs = require('fs');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const AdmZip = require('adm-zip');
+const xpath = require('xpath');
+const { v4: uuidv4 } = require('uuid');
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+const readZipFile = (zipFilePath, fileName) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(fileName);
+  const content = zipEntry.getData().toString('utf8');
+  return content;
+};
+
+const writeZipFile = (zipFilePath, fileName, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
+
+const replacePlaceholder = (documentContent, jsonContent) => {
+  log(`Entering replacePlaceholder`);
+  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
+
+  select("//w:sdt", doc).forEach(node => {
+    const tagNode = select('.//w:tag/@w:val', node)[0];
+    if (tagNode) {
+      const tagName = tagNode.value;
+      log(`Processing tag: ${tagName}`);
+      const tagValue = jsonContent[tagName];
+
+      if (tagValue !== null && tagValue !== undefined) {
+        log(`Found value for ${tagName}: ${tagValue}`);
+        const textNodes = select('.//w:t', node);
+
+        if (textNodes.length > 0) {
+          log(`Replacing text nodes for tag: ${tagName}`);
+          textNodes.forEach(textNode => {
+            textNode.textContent = tagValue;
+          });
+        } else {
+          log(`No text nodes found for tag: ${tagName}`);
+        }
+      } else {
+        log(`No value found for tag: ${tagName}`);
+      }
+    } else {
+      log(`No tagNode found in node`);
+    }
+  });
+
+  const serializer = new XMLSerializer();
+  const updatedContent = serializer.serializeToString(doc);
+  log(`Exiting replacePlaceholder`);
+  return updatedContent;
+};
+
 export const processDocument = async (jsonContent) => {
-  // Implementation of processDocument
+  const templateFilePath = './Test Document.docx';
+  const fileName = 'word/document.xml';
+  const newFileName = `./updated_${uuidv4()}.docx`;
+
+  fs.copyFileSync(templateFilePath, newFileName);
+
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
+
+  log(`Document updated successfully. Saved as ${newFileName}`);
+  return newFileName;
 };
-api/v1/service-now/integrations/upload.js
-javascript
-Copy code
+```
+
+### api/v1/service-now/integrations/upload.js
+```javascript
+const fs = require('fs');
+const JSZip = require('jszip');
+const xml2js = require('xml2js');
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+const readFileContent = async (filePath) => {
+  return fs.promises.readFile(filePath);
+};
+
+const extractXmlFromZip = async (data) => {
+  const zip = await JSZip.loadAsync(data);
+  return zip.file('word/document.xml').async('text');
+};
+
+const parseXml = async (xmlContent) => {
+  const parser = new xml2js.Parser();
+  return parser.parseStringPromise(xmlContent);
+};
+
+const traverseNodes = (node, tags) => {
+  if (node['w:sdt']) {
+    node['w:sdt'].forEach(sdt => {
+      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
+      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
+      if (tag && tag['$'] && tag['$']['w:val']) {
+        const tagName = tag['$']['w:val'];
+        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
+        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
+        if (tagValue.trim() !== '') {
+          tags[tagName] = tagValue;
+        }
+      }
+    });
+  }
+  Object.values(node).forEach(value => {
+    if (Array.isArray(value)) {
+      value.forEach(child => traverseNodes(child, tags));
+    }
+  });
+};
+
+const extractTagValue = (content) => {
+  let text = '';
+  function traverseContent(contentNode) {
+    if (contentNode['w:t'] && Array.isArray(contentNode['w:t'])) {
+      contentNode['w:t'].forEach(textNode => {
+        if (typeof textNode === 'string') {
+          text += textNode;
+        } else if (textNode['_']) {
+          text += textNode['_'];
+        }
+      });
+    }
+    Object.values(contentNode).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseContent(child));
+      }
+    });
+  }
+  traverseContent(content);
+  return text;
+};
+
 export const extractContentControlTags = async (filePath) => {
-  // Implementation of extractContentControlTags
+  try {
+    const data = await readFileContent(filePath);
+    const documentXml = await extractXmlFromZip(data);
+    const xmlParsed = await parseXml(documentXml);
+
+    const tags = {};
+    const body = xmlParsed['w:document']['w:body'][0];
+    traverseNodes(body, tags);
+
+    return tags;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
 };
+```
