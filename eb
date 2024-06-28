@@ -1,115 +1,35 @@
-eb1
+Here is the code refactored to match the specified path structure:
 
-import controller from './controller';
-import bodyParser from "body-parser";
-import  serviceNow from '../../../config/apiConfig';
+server.js
+javascript
+Copy code
+import express from 'express';
+import multer from 'multer';
+import { log } from './handlers';
+import { handleUpdateDocument, handleExtractTags } from './api/v1/service-now/integrations/handlers';
 
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('../../../config/swagger/swaggerGIMSnow.json');
-
-export default (app) => {
-
-    app.route('/api/v1/kafka/consumers/action')
-        .get(controller.startStopKafkaConsumer);
-
-    app.route('/api/v1/kafka/consumers/get')
-        .get(controller.getConsumerIds);
-
-    app.route('/health/ping')
-        .get(controller.getPing);
-
-    app.route('/api/v1/service-now/integrations/record/push')
-        .post(bodyParser.json({"type" : "*/*", limit: '100mb'}),controller.pushRecordSNOW);
-
-    app.route('/api/v1/service-now/integrations/incident/record/push')
-        .post(bodyParser.json({"type" : "*/*"}),controller.sendDataFromSNOW);
-
-    app.route('/api/v1/service-now/integrations/incident/:incidentNo/role')
-        .put(bodyParser.json({"type" : "*/*"}),controller.updateRole);
-
-    app.route('/api/v1/service-now/integrations/incident/:incidentNo/zoom')
-        .put(bodyParser.json({"type" : "*/*"}),controller.updateZoom);
-
-    app.route('/api/v1/service-now/integrations/symphony/:incidentNo/:purpose/update/:roomID')
-        .post(bodyParser.json({"type" : "*/*"}),controller.updateSymphony);
-
-    app.route('/api/v1/service-now/integrations/symphony/:incidentNo/:purpose/delete')
-        .post(bodyParser.json({"type" : "*/*"}),controller.deleteCollaboration);
-
-    app.route('/api/v1/service-now/integrations/notification/send-email')
-        .put(bodyParser.json({"type" : "*/*"}),controller.sendEmail); 
-    
-    app.route('/api/v1/service-now/integrations/incident/cio-notables')
-        .put(bodyParser.json({"type" : "*/*"}),controller.sendCioNotables); 
-
-    app.route('/api/v1/service-now/integrations/incident/facilities')
-        .post(bodyParser.json({"type" : "*/*"}),controller.sendFacilitiesData);
-
-    app.route('/api/v1/service-now/integrations/incident/criteria')
-        .get(controller.incidentQuery);
-
-    app.route('/api/v1/service-now/integrations/incident/:incidentNo')
-        .get(controller.getIncident); 
-    
-    app.route('/api/v1/service-now/integrations/incident')
-        .post(bodyParser.json({"type" : "*/*"}),controller.createIncident);
-
-    app.route('/api/v1/service-now/integrations/incident/:incidentNo')
-        .put(bodyParser.json({"type" : "*/*"}),controller.updateIncident);
-    app.route('/api/v1/service-now/integrations/incident/oprisk/:incidentNo')
-        .put(bodyParser.json({"type" : "*/*"}),controller.updateOpriskId);
-
-    app.route('/api/v1/service-now/integrations/incident/sync/:incidentNo')
-        .get(bodyParser.json({"type" : "*/*"}),controller.syncGimIncident);
-
-    app.route('/api/v1/service-now/integrations/incident/is-open/:incidentNo')
-        .get(controller.isOpen);
-
-    app.route('/api/v1/service-now/integrations/incident/send-to-ebonding/:incidentNo')
-        .put(controller.sendToEbonding);
-
-    app.route('/api/v1/service-now/integrations/incident/:incidentNo/create-collaboration/:type')
-        .post(controller.createCollaboration);
-    
-    app.route('/api/v1/service-now/integrations/incident/mitigate/:incidentNo')
-        .put(bodyParser.json({"type" : "*/*"}),controller.mitigateIncident);
-
-    app.route('/api/v1/service-now/integrations/incident/resolve/:incidentNo')
-        .put(bodyParser.json({"type" : "*/*"}),controller.resolveIncident);
-
-    app.route('/api/v1/service-now/integrations/incident/tag')
-        .put(bodyParser.json({"type" : "*/*"}),controller.addTag);
-
-    app.route('/api/v1/service-now/integrations/incident/associate')
-        .put(bodyParser.json({"type" : "*/*"}),controller.associateIncident);
-        
-    let options = {
-        customCss: '.swagger-ui .topbar { display: none }'
-    };
-    app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
-
-}
-=============================
-
-
-
-eb2
-
-const express = require('express');
-const fs = require('fs');
-const multer = require('multer');  // Add this line
-const upload = multer({ dest: 'uploads/' });
-const { processDocument } = require('./PostData');
-const { extractContentControlTags } = require('./upload.js');
 const app = express();
+const upload = multer({ dest: 'uploads/' });
 
 app.use(express.json());
 
-const log = (message) => {
+app.route('/api/v1/service-now/integrations/update-document').post(handleUpdateDocument);
+app.route('/api/v1/service-now/integrations/extract-tags').post(upload.single('Docxfile'), handleExtractTags);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => log(`Server is running on port ${PORT}`));
+api/v1/service-now/integrations/handlers.js
+javascript
+Copy code
+import fs from 'fs';
+import { processDocument } from './PostData';
+import { extractContentControlTags } from './upload';
+
+export const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
 };
 
-app.post('/update-document', async (req, res) => {
+export const handleUpdateDocument = async (req, res) => {
   log(`Received JSON: ${JSON.stringify(req.body)}`);
   const jsonContent = req.body;
 
@@ -122,7 +42,6 @@ app.post('/update-document', async (req, res) => {
     const fileStream = fs.createReadStream(updatedFilePath);
 
     fileStream.pipe(res).on('finish', () => {
-      // Clean up the file after sending it
       fs.unlink(updatedFilePath, (unlinkErr) => {
         if (unlinkErr) {
           console.error('Error deleting file:', unlinkErr);
@@ -139,9 +58,9 @@ app.post('/update-document', async (req, res) => {
     console.error('Error processing document:', error);
     res.status(500).send('Error processing document');
   }
-});
+};
 
-app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
+export const handleExtractTags = async (req, res) => {
   if (!req.file) {
     log(`No file received in the request`);
     return res.status(400).send('No file uploaded');
@@ -159,9 +78,113 @@ app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
   } finally {
     fs.unlinkSync(filePath);
   }
-});
+};
+api/v1/service-now/integrations/PostData.js
+javascript
+Copy code
+export const processDocument = async (jsonContent) => {
+  // Implementation of processDocument
+};
+api/v1/service-now/integrations/upload.js
+javascript
+Copy code
+export const extractContentControlTags = async (filePath) => {
+  // Implementation of extractContentControlTags
+};
+  app.route('/api/v1/service-now/integrations/incident/record/push')
+        .post(bodyParser.json({"type" : "*/*"}),controller.sendDataFromSNOW); in this format calling the respective function from controller.js
+ChatGPT
+Here is the refactored code with routes defined in the specified format and calling the respective functions from controller.js:
+
+server.js
+javascript
+Copy code
+import express from 'express';
+import bodyParser from 'body-parser';
+import multer from 'multer';
+import * as controller from './api/v1/service-now/integrations/controller';
+import { log } from './api/v1/service-now/integrations/handlers';
+
+const app = express();
+const upload = multer({ dest: 'uploads/' });
+
+app.use(express.json());
+
+app.route('/api/v1/service-now/integrations/update-document')
+    .post(bodyParser.json({ "type": "*/*" }), controller.handleUpdateDocument);
+
+app.route('/api/v1/service-now/integrations/extract-tags')
+    .post(upload.single('Docxfile'), controller.handleExtractTags);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  log(`Server is running on port ${PORT}`);
-});
+app.listen(PORT, () => log(`Server is running on port ${PORT}`));
+api/v1/service-now/integrations/controller.js
+javascript
+Copy code
+import fs from 'fs';
+import { processDocument } from './PostData';
+import { extractContentControlTags } from './upload';
+import { log } from './handlers';
+
+export const handleUpdateDocument = async (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const jsonContent = req.body;
+
+  try {
+    const updatedFilePath = await processDocument(jsonContent);
+
+    res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    const fileStream = fs.createReadStream(updatedFilePath);
+
+    fileStream.pipe(res).on('finish', () => {
+      fs.unlink(updatedFilePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting file:', unlinkErr);
+        }
+      });
+    });
+
+    fileStream.on('error', (err) => {
+      console.error('Error reading file:', err);
+      res.status(500).send('Error reading file');
+    });
+
+  } catch (error) {
+    console.error('Error processing document:', error);
+    res.status(500).send('Error processing document');
+  }
+};
+
+export const handleExtractTags = async (req, res) => {
+  if (!req.file) {
+    log(`No file received in the request`);
+    return res.status(400).send('No file uploaded');
+  }
+
+  log(`Received file for extraction: ${req.file.path}`);
+  const filePath = req.file.path;
+
+  try {
+    const tags = await extractContentControlTags(filePath);
+    res.status(200).json(tags);
+  } catch (error) {
+    console.error('Error extracting tags:', error);
+    res.status(500).send('Error extracting tags');
+  } finally {
+    fs.unlinkSync(filePath);
+  }
+};
+api/v1/service-now/integrations/PostData.js
+javascript
+Copy code
+export const processDocument = async (jsonContent) => {
+  // Implementation of processDocument
+};
+api/v1/service-now/integrations/upload.js
+javascript
+Copy code
+export const extractContentControlTags = async (filePath) => {
+  // Implementation of extractContentControlTags
+};
