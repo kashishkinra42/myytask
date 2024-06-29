@@ -1,15 +1,7 @@
-The error you're encountering is because `filePath` is not defined in the current scope of the module where the file is being handled. 
-
-You need to modify the code to accept the file path from the `multer` upload dynamically in the POST request and then pass it to the extraction function.
-
-Here is the updated version of both the `upload.js` and `app.js` files to correctly handle the dynamic file path:
-
-### Updated `upload.js`
-
-```javascript
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
+const path = require('path');
 
 const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
@@ -108,7 +100,7 @@ const extractTagValue = (content) => {
   traverseContent(content);
 
   if (listItems.length > 0) {
-    return listItems;
+    return listItems.map(item => ({ text: item, highlighted: false }));
   } else {
     return text;
   }
@@ -124,20 +116,6 @@ const extractContentControlTags = async (filePath) => {
     const body = xmlParsed['w:document']['w:body'][0];
     traverseNodes(body, tags);
 
-    // Process the `Where We Got Lucky` field if it exists
-    if (tags['Where We Got Lucky']) {
-      const listItems = tags['Where We Got Lucky'].split(/(\d+\.\s+)/).filter(Boolean);
-      tags['Where We Got Lucky'] = listItems.reduce((acc, item, index) => {
-        if (index % 2 === 0) {
-          acc.push(item.trim());
-        } else {
-          acc.push({ text: listItems[index + 1].trim(), highlighted: true });
-          listItems.splice(index + 1, 1); // Remove the processed item
-        }
-        return acc;
-      }, []);
-    }
-
     return tags;
   } catch (error) {
     console.error('Error:', error);
@@ -146,60 +124,3 @@ const extractContentControlTags = async (filePath) => {
 };
 
 module.exports = { extractContentControlTags };
-```
-
-### Updated `app.js`
-
-```javascript
-const express = require('express');
-const multer = require('multer');
-const fs = require('fs');
-const { extractContentControlTags } = require('./upload');
-
-const app = express();
-const port = 3000;
-
-const upload = multer({ dest: 'uploads/' });
-
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
-  if (!req.file) {
-    log('No file received in the request');
-    return res.status(400).send('No file uploaded');
-  }
-
-  const filePath = req.file.path;
-  log(`Received file for extraction: ${filePath}`);
-
-  try {
-    const tags = await extractContentControlTags(filePath);
-    res.status(200).json(tags);
-  } catch (error) {
-    console.error('Error extracting tags:', error);
-    res.status(500).send('Error extracting tags');
-  } finally {
-    fs.unlinkSync(filePath);
-  }
-});
-
-app.listen(port, () => {
-  log(`Server is running on port ${port}`);
-});
-```
-
-### Explanation
-
-1. **Error Handling:**
-   - The `filePath` is dynamically passed from the uploaded file in the POST request, ensuring it is not hardcoded.
-
-2. **File Upload Handling:**
-   - `multer` is used to handle file uploads, storing them temporarily in the `uploads/` directory.
-
-3. **Processing `Where We Got Lucky` Field:**
-   - The `Where We Got Lucky` field is split into an array of items based on the numbering format and processed to check for highlighted items.
-   - Highlighted items are transformed into objects with `text` and `highlighted` properties.
-
-This setup ensures the file path is dynamically handled and the output format is corrected for the `Where We Got Lucky` field.
