@@ -53,6 +53,8 @@ const traverseNodes = (node, tags) => {
 const extractTagValue = (content) => {
   let text = '';
   let listItems = [];
+  let listItemIndex = 1;
+  
   function traverseContent(contentNode) {
     if (contentNode['w:p']) {
       contentNode['w:p'].forEach(pNode => {
@@ -60,9 +62,11 @@ const extractTagValue = (content) => {
           // Detect a numbered list item
           const listItem = extractTextFromNode(pNode);
           if (typeof listItem === 'string' && listItem.trim() !== '') {
-            listItems.push(listItem);
+            listItems.push(`${listItemIndex}. ${listItem}`);
+            listItemIndex++;
           } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
-            listItems.push(listItem.text);
+            listItems.push(`${listItemIndex}. ${listItem.text}`);
+            listItemIndex++;
           }
         } else {
           // Regular text node
@@ -82,7 +86,7 @@ const extractTagValue = (content) => {
     });
   }
   traverseContent(content);
-  return text || listItems.join('\n');
+  return listItems.length ? listItems.join('\n') : text;
 };
 
 const extractTextFromNode = (node) => {
