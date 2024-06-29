@@ -1,136 +1,53 @@
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
-const path = require('path');
-const filePath = path.join(__dirname, './newdoc.docx');
+{
+    "Incident Number": "1234",
+    "Date": "6/13/2024",
+    "Authors": "Kashish kinraa",
+    "Status": "Mitigated",
+    "Summary": "This is the root cause",
+    "Impact": "This is the impact This is the impact",
+    "Root Causes": "This is the root cause",
+    "Trigger": "Hellohi",
+    "Change(s) that triggered the incident": "Hello hiHellohi",
+    "Resolution": "Hello hhi",
+    "Detection": "Helloi",
+    "Incident Theme": "Choose an item.",
+    "Link to the latest ORR": "Hello hilohi",
+    "SLO Impact": "Hello hi",
+    "What Went Well": "Kash",
+    "What Went Wrong": "Click or tap here to enter text.",
+    "Where We Got Lucky": "1. Kash2. Kinra3. My name4. Heloo5. yes",
+    "F2": "Click or tap here to enter text."
+}
 
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-const readFileContent = async (filePath) => {
-  return fs.promises.readFile(filePath);
-};
-
-const extractXmlFromZip = async (data) => {
-  const zip = await JSZip.loadAsync(data);
-  return zip.file('word/document.xml').async('text');
-};
-
-const parseXml = async (xmlContent) => {
-  const parser = new xml2js.Parser();
-  return parser.parseStringPromise(xmlContent);
-};
-
-const traverseNodes = (node, tags) => {
-  if (node['w:sdt']) {
-    node['w:sdt'].forEach(sdt => {
-      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
-      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
-      if (tag && tag['$'] && tag['$']['w:val']) {
-        const tagName = tag['$']['w:val'];
-        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
-        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
-        if (tagValue !== '') {
-          tags[tagName] = tagValue;
-        }
-      }
-    });
-  }
-  Object.values(node).forEach(value => {
-    if (Array.isArray(value)) {
-      value.forEach(child => traverseNodes(child, tags));
-    }
-  });
-};
-
-const extractTagValue = (content) => {
-  let text = '';
-  let listItems = [];
-
-  function traverseContent(contentNode) {
-    if (contentNode['w:p']) {
-      contentNode['w:p'].forEach(pNode => {
-        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
-          const listItem = extractTextFromNode(pNode);
-          if (listItem) {
-            listItems.push(listItem);
-          }
-        } else {
-          const pText = extractTextFromNode(pNode);
-          if (pText) {
-            text += pText;
-          }
-        }
-      });
-    }
-    Object.values(contentNode).forEach(value => {
-      if (Array.isArray(value)) {
-        value.forEach(child => traverseContent(child));
-      }
-    });
-  }
-
-  function extractTextFromNode(node) {
-    let nodeText = '';
-    let highlighted = false;
-
-    if (node['w:r']) {
-      node['w:r'].forEach(rNode => {
-        if (rNode['w:rPr'] && rNode['w:rPr'][0]['w:highlight']) {
-          highlighted = true;
-        }
-        if (rNode['w:t']) {
-          rNode['w:t'].forEach(textNode => {
-            if (typeof textNode === 'string') {
-              nodeText += textNode;
-            } else if (textNode['_']) {
-              nodeText += textNode['_'];
-            }
-          });
-        }
-      });
-    }
-
-    if (highlighted) {
-      return { text: nodeText, highlighted: true };
-    }
-    return nodeText;
-  }
-
-  traverseContent(content);
-
-  if (listItems.length > 0) {
-    return listItems;
-  } else {
-    return text;
-  }
-};
-
-const extractContentControlTags = async (filePath) => {
-  try {
-    const data = await readFileContent(filePath);
-    const documentXml = await extractXmlFromZip(data);
-    const xmlParsed = await parseXml(documentXml);
-
-    const tags = {};
-    const body = xmlParsed['w:document']['w:body'][0];
-    traverseNodes(body, tags);
-
-    return tags;
-  } catch (error) {
-    console.error('Error:', error);
-    throw error;
-  }
-};
-
-module.exports = { extractContentControlTags };
-
-// To run the extraction and save the tags to a JSON file:
-const outputPath = path.join(__dirname, 'myoutputk.json');
-extractContentControlTags(filePath).then(tags => {
-  fs.writeFileSync(outputPath, JSON.stringify(tags, null, 2));
-  log('Document tags extracted and saved successfully.');
-}).catch(error => {
-  log(`Error during extraction: ${error.message}`);
-});
+{
+  "Incident Number": "1234",
+  "Date": "6/13/2024",
+  "Authors": "Kashish kinraa",
+  "Status": "Mitigated",
+  "Summary": "This is the root cause",
+  "Impact": "This is the impact This is the impact",
+  "Root Causes": "This is the root cause",
+  "Trigger": "Hellohi",
+  "Change(s) that triggered the incident": "Hello hiHellohi",
+  "Resolution": "Hello hhi",
+  "Detection": "Helloi",
+  "Incident Theme": "Choose an item.",
+  "Link to the latest ORR": "Hello hilohi",
+  "SLO Impact": "Hello hi",
+  "What Went Well": "Kash",
+  "What Went Wrong": "Click or tap here to enter text.",
+  "Where We Got Lucky": [
+    "Kash",
+    "Kinra",
+    {
+      "text": "My name",
+      "highlighted": true
+    },
+    {
+      "text": "Heloo",
+      "highlighted": true
+    },
+    "yes"
+  ],
+  "F2": "Click or tap here to enter text."
+}
