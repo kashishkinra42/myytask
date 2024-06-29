@@ -1,0 +1,217 @@
+Sure, let's start by creating unit tests for each of the main modules: `PostData.js`, `upload.js`, and `controller.js`. I'll provide example tests using the `jest` testing framework and provide explanations for each line.
+
+### Setting Up Jest
+First, ensure you have Jest installed in your project. You can install it using npm:
+
+```sh
+npm install --save-dev jest
+```
+
+Add a `test` script to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "test": "jest"
+  }
+}
+```
+
+### Unit Tests for `PostData.js`
+Create a new file called `PostData.test.js` in the same directory as `PostData.js`:
+
+```javascript
+// PostData.test.js
+import fs from 'fs';
+import { processDocument } from './PostData';
+import AdmZip from 'adm-zip';
+
+jest.mock('fs');
+jest.mock('adm-zip');
+
+describe('processDocument', () => {
+  it('should process and update the document with the given JSON content', async () => {
+    // Mock data
+    const jsonContent = { placeholder: 'replacement' };
+    const zipFilePath = 'path/to/template.docx';
+    const updatedFilePath = 'path/to/updated.docx';
+    const documentXml = '<w:document><w:body><w:sdt><w:sdtPr><w:tag w:val="placeholder"/></w:sdtPr><w:sdtContent><w:t>old value</w:t></w:sdtContent></w:sdt></w:body></w:document>';
+    const updatedXml = '<w:document><w:body><w:sdt><w:sdtPr><w:tag w:val="placeholder"/></w:sdtPr><w:sdtContent><w:t>replacement</w:t></w:sdtContent></w:sdt></w:body></w:document>';
+
+    // Mock fs and AdmZip behavior
+    fs.copyFileSync.mockImplementation(() => {});
+    fs.readFileSync.mockReturnValue(documentXml);
+    AdmZip.mockImplementation(() => ({
+      getEntry: jest.fn().mockReturnValue({
+        getData: jest.fn().mockReturnValue(Buffer.from(documentXml, 'utf8')),
+      }),
+      updateFile: jest.fn(),
+      writeZip: jest.fn(),
+    }));
+
+    // Mock uuid generation
+    jest.spyOn(global, 'Date').mockImplementation(() => ({
+      toISOString: jest.fn().mockReturnValue('mocked-uuid'),
+    }));
+
+    const result = await processDocument(jsonContent);
+
+    // Expectations
+    expect(fs.copyFileSync).toHaveBeenCalledWith(zipFilePath, updatedFilePath);
+    expect(result).toBe(updatedFilePath);
+  });
+});
+```
+
+**Explanation**:
+- **Imports and Mocking**: Import necessary modules and mock `fs` and `AdmZip` using `jest.mock()`.
+- **Test Case**: Define a test case that verifies `processDocument` correctly updates the document.
+- **Mock Data**: Set up mock data and mock behavior for `fs` and `AdmZip`.
+- **Test Execution and Expectations**: Call `processDocument` with mock data and assert that the expected file operations were performed correctly.
+
+### Unit Tests for `upload.js`
+Create a new file called `upload.test.js` in the same directory as `upload.js`:
+
+```javascript
+// upload.test.js
+import fs from 'fs';
+import JSZip from 'jszip';
+import { extractContentControlTags } from './upload';
+
+jest.mock('fs');
+jest.mock('jszip');
+
+describe('extractContentControlTags', () => {
+  it('should extract content control tags from a DOCX file', async () => {
+    // Mock data
+    const filePath = 'path/to/file.docx';
+    const documentXml = '<w:document><w:body><w:sdt><w:sdtPr><w:tag w:val="placeholder"/></w:sdtPr><w:sdtContent><w:t>value</w:t></w:sdtContent></w:sdt></w:body></w:document>';
+    const zip = {
+      file: jest.fn().mockReturnValue({
+        async: jest.fn().mockResolvedValue(documentXml),
+      }),
+    };
+
+    // Mock fs and JSZip behavior
+    fs.promises.readFile.mockResolvedValue(Buffer.from('mocked data'));
+    JSZip.loadAsync.mockResolvedValue(zip);
+
+    const result = await extractContentControlTags(filePath);
+
+    // Expectations
+    expect(fs.promises.readFile).toHaveBeenCalledWith(filePath);
+    expect(JSZip.loadAsync).toHaveBeenCalledWith(Buffer.from('mocked data'));
+    expect(result).toEqual({ placeholder: 'value' });
+  });
+});
+```
+
+**Explanation**:
+- **Imports and Mocking**: Import necessary modules and mock `fs` and `JSZip` using `jest.mock()`.
+- **Test Case**: Define a test case that verifies `extractContentControlTags` correctly extracts tags.
+- **Mock Data**: Set up mock data and mock behavior for `fs` and `JSZip`.
+- **Test Execution and Expectations**: Call `extractContentControlTags` with mock data and assert that the extracted tags match the expected output.
+
+### Unit Tests for `controller.js`
+Create a new file called `controller.test.js` in the same directory as `controller.js`:
+
+```javascript
+// controller.test.js
+import fs from 'fs';
+import { handleUpdateDocument, handleExtractTags } from './controller';
+import { processDocument } from './PostData';
+import { extractContentControlTags } from './upload';
+import { log } from './handlers';
+
+jest.mock('fs');
+jest.mock('./PostData');
+jest.mock('./upload');
+jest.mock('./handlers');
+
+describe('controller', () => {
+  describe('handleUpdateDocument', () => {
+    it('should process document and return the updated file', async () => {
+      // Mock request and response
+      const req = { body: { placeholder: 'replacement' } };
+      const res = {
+        setHeader: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        send: jest.fn(),
+      };
+
+      // Mock processDocument behavior
+      const updatedFilePath = 'path/to/updated.docx';
+      processDocument.mockResolvedValue(updatedFilePath);
+      fs.createReadStream.mockReturnValue({
+        pipe: jest.fn().mockImplementation((res) => {
+          res.on('finish', jest.fn());
+          return { on: jest.fn().mockImplementation((event, callback) => callback()) };
+        }),
+      });
+
+      await handleUpdateDocument(req, res);
+
+      // Expectations
+      expect(processDocument).toHaveBeenCalledWith(req.body);
+      expect(res.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="updated_document.docx"');
+      expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      expect(res.send).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleExtractTags', () => {
+    it('should extract tags from uploaded file', async () => {
+      // Mock request and response
+      const req = { file: { path: 'path/to/file.docx' } };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        send: jest.fn(),
+      };
+
+      // Mock extractContentControlTags behavior
+      const extractedTags = { placeholder: 'value' };
+      extractContentControlTags.mockResolvedValue(extractedTags);
+      fs.unlinkSync.mockImplementation(() => {});
+
+      await handleExtractTags(req, res);
+
+      // Expectations
+      expect(extractContentControlTags).toHaveBeenCalledWith(req.file.path);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(extractedTags);
+      expect(fs.unlinkSync).toHaveBeenCalledWith(req.file.path);
+    });
+
+    it('should handle missing file error', async () => {
+      // Mock request and response
+      const req = { file: null };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        send: jest.fn(),
+      };
+
+      await handleExtractTags(req, res);
+
+      // Expectations
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.send).toHaveBeenCalledWith('No file uploaded');
+    });
+  });
+});
+```
+
+**Explanation**:
+- **Imports and Mocking**: Import necessary modules and mock dependencies using `jest.mock()`.
+- **Test Cases**: Define test cases that verify `handleUpdateDocument` and `handleExtractTags` behavior.
+- **Mock Request and Response**: Set up mock request and response objects to simulate Express behavior.
+- **Test Execution and Expectations**: Call the controller functions with mock data and assert that the expected operations were performed correctly.
+
+### Running the Tests
+To run the tests, use the following command:
+
+```sh
+npm test
+```
+
+This command will execute all the test cases defined in the `PostData.test.js`, `upload.test.js`, and `controller.test.js` files, ensuring that your code behaves as expected.
