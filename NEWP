@@ -46,6 +46,18 @@ const traverseNodes = (node, tags) => {
   });
 };
 
+const extractTextFromNode = (node) => {
+  let text = '';
+  if (node['w:r']) {
+    node['w:r'].forEach(run => {
+      if (run['w:t']) {
+        text += run['w:t'].join('');
+      }
+    });
+  }
+  return text;
+};
+
 const extractTagValue = (content) => {
   let text = '';
   let listItems = [];
@@ -78,7 +90,7 @@ const extractTagValue = (content) => {
     });
   }
   traverseContent(content);
-  return text;
+  return text + (listItems.length ? '\n' + listItems.join('\n') : '');
 };
 
 const extractContentControlTags = async (filePath) => {
@@ -99,6 +111,7 @@ const extractContentControlTags = async (filePath) => {
 };
 
 module.exports = { extractContentControlTags };
+
 
 app.js
 const express = require('express');
