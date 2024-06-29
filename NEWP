@@ -1,4 +1,8 @@
-To handle the numbered list extraction correctly and avoid hardcoding the filename, we will ensure that the `Where We Got Lucky` field is an array of strings or objects if highlighted. We will adjust the file handling in the `app.js` to accept the file upload dynamically via a POST request from Postman.
+The error you're encountering is because `filePath` is not defined in the current scope of the module where the file is being handled. 
+
+You need to modify the code to accept the file path from the `multer` upload dynamically in the POST request and then pass it to the extraction function.
+
+Here is the updated version of both the `upload.js` and `app.js` files to correctly handle the dynamic file path:
 
 ### Updated `upload.js`
 
@@ -6,7 +10,6 @@ To handle the numbered list extraction correctly and avoid hardcoding the filena
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
-const path = require('path');
 
 const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
@@ -121,6 +124,20 @@ const extractContentControlTags = async (filePath) => {
     const body = xmlParsed['w:document']['w:body'][0];
     traverseNodes(body, tags);
 
+    // Process the `Where We Got Lucky` field if it exists
+    if (tags['Where We Got Lucky']) {
+      const listItems = tags['Where We Got Lucky'].split(/(\d+\.\s+)/).filter(Boolean);
+      tags['Where We Got Lucky'] = listItems.reduce((acc, item, index) => {
+        if (index % 2 === 0) {
+          acc.push(item.trim());
+        } else {
+          acc.push({ text: listItems[index + 1].trim(), highlighted: true });
+          listItems.splice(index + 1, 1); // Remove the processed item
+        }
+        return acc;
+      }, []);
+    }
+
     return tags;
   } catch (error) {
     console.error('Error:', error);
@@ -129,15 +146,6 @@ const extractContentControlTags = async (filePath) => {
 };
 
 module.exports = { extractContentControlTags };
-
-// To run the extraction and save the tags to a JSON file:
-const outputPath = path.join(__dirname, 'myoutputk.json');
-extractContentControlTags(filePath).then(tags => {
-  fs.writeFileSync(outputPath, JSON.stringify(tags, null, 2));
-  log('Document tags extracted and saved successfully.');
-}).catch(error => {
-  log(`Error during extraction: ${error.message}`);
-});
 ```
 
 ### Updated `app.js`
@@ -145,7 +153,6 @@ extractContentControlTags(filePath).then(tags => {
 ```javascript
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
 const fs = require('fs');
 const { extractContentControlTags } = require('./upload');
 
@@ -182,3 +189,17 @@ app.listen(port, () => {
   log(`Server is running on port ${port}`);
 });
 ```
+
+### Explanation
+
+1. **Error Handling:**
+   - The `filePath` is dynamically passed from the uploaded file in the POST request, ensuring it is not hardcoded.
+
+2. **File Upload Handling:**
+   - `multer` is used to handle file uploads, storing them temporarily in the `uploads/` directory.
+
+3. **Processing `Where We Got Lucky` Field:**
+   - The `Where We Got Lucky` field is split into an array of items based on the numbering format and processed to check for highlighted items.
+   - Highlighted items are transformed into objects with `text` and `highlighted` properties.
+
+This setup ensures the file path is dynamically handled and the output format is corrected for the `Where We Got Lucky` field.
