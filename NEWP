@@ -134,3 +134,26 @@ extractContentControlTags(filePath).then(tags => {
 }).catch(error => {
   log(`Error during extraction: ${error.message}`);
 });
+
+
+app.js
+
+app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
+  if (!req.file) {
+    log(`No file received in the request`);
+    return res.status(400).send('No file uploaded');
+  }
+
+  log(`Received file for extraction: ${req.file.path}`);
+  const filePath = req.file.path;
+
+  try {
+    const tags = await extractContentControlTags(filePath);
+    res.status(200).json(tags);
+  } catch (error) {
+    console.error('Error extracting tags:', error);
+    res.status(500).send('Error extracting tags');
+  } finally {
+    fs.unlinkSync(filePath);
+  }
+});
