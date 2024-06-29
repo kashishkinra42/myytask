@@ -1,190 +1,400 @@
-The error you encountered is because Jest is not configured to handle ES6 modules by default. You need to configure Jest to transform ES6 syntax using Babel. Here's how you can do it step by step:
+// postdata.js
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
 
-1. **Install Babel dependencies**:
-   ```bash
-   npm install --save-dev @babel/preset-env @babel/core @babel/preset-env
-   ```
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
 
-2. **Create a Babel configuration file**:
-   Create a file named `.babelrc` in the root of your project with the following content:
-   ```json
-   {
-     "presets": ["@babel/preset-env"]
-   }
-   ```
+const readZipFile = (zipFilePath, fileName) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(fileName);
+  const content = zipEntry.getData().toString('utf8');
+  return content;
+};
 
-3. **Update your Jest configuration**:
-   Add a `jest.config.js` file to the root of your project with the following content:
-   ```javascript
-   module.exports = {
-     transform: {
-       "^.+\\.js$": "babel-jest"
-     },
-     moduleFileExtensions: ["js", "json", "jsx", "node"],
-     testEnvironment: "node"
-   };
-   ```
+const writeZipFile = (zipFilePath, fileName, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
 
-4. **Ensure your package.json scripts include Jest**:
-   Make sure you have the following script in your `package.json`:
-   ```json
-   "scripts": {
-     "test": "jest"
-   }
-   ```
+const replacePlaceholder = (documentContent, jsonContent) => {
+  log(`Entering replacePlaceholder`);
+  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
 
-With these steps, Jest should be able to handle ES6 module syntax.
-
-### Example Test Cases
-
-Now, let's create some basic test cases for your `PostData`, `upload`, and `controller` modules.
-
-#### PostData.test.js
-```javascript
-import { processDocument } from './api/v1/service-now/integrations/PostData';
-import fs from 'fs';
-import path from 'path';
-
-jest.mock('fs');
-
-describe('processDocument', () => {
-  afterEach(() => {
-    jest.resetAllMocks();
+  select("//w:sdt", doc).forEach(node => {
+    const tagNode = select('.//w:tag/@w:val', node)[0];
+    if (tagNode) {
+      const tagName = tagNode.value;
+      log(`Processing tag: ${tagName}`);
+      const tagValue = jsonContent[tagName];
+      
+      if (tagValue !== null && tagValue !== undefined) {
+        log(`Found value for ${tagName}: ${tagValue}`);
+        const textNodes = select('.//w:t', node);
+        
+        if (textNodes.length > 0) {
+          log(`Replacing text nodes for tag: ${tagName}`);
+          textNodes.forEach(textNode => {
+            textNode.textContent = tagValue;
+          });
+        } else {
+          log(`No text nodes found for tag: ${tagName}`);
+        }
+      } else {
+        log(`No value found for tag: ${tagName}`);
+      }
+    } else {
+      log(`No tagNode found in node`);
+    }
   });
+  
+  const serializer = new XMLSerializer();
+  const updatedContent = serializer.serializeToString(doc);
+  log(`Exiting replacePlaceholder`);
+  return updatedContent;
+};
 
-  test('should process the document and return the new file path', async () => {
-    const mockJsonContent = { tagName: 'TagValue' };
-    const mockFilePath = 'mock-file-path';
-    const mockNewFileName = path.resolve(`./updated_mock-file-path.docx`);
-    
-    fs.copyFileSync.mockImplementation((src, dest) => dest);
-    fs.createReadStream.mockImplementation(() => ({
-      pipe: jest.fn().mockReturnThis(),
-      on: jest.fn(),
-    }));
-    fs.unlink.mockImplementation((filePath, callback) => callback());
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './Test Document.docx';
+  const fileName = 'word/document.xml';
 
-    const result = await processDocument(mockJsonContent);
-    
-    expect(result).toBe(mockNewFileName);
-    expect(fs.copyFileSync).toHaveBeenCalledTimes(1);
-    expect(fs.createReadStream).toHaveBeenCalledTimes(1);
-    expect(fs.unlink).toHaveBeenCalledTimes(1);
-  });
-});
-```
+  const newFileName = `./updated_${uuidv4()}.docx`;
+  fs.copyFileSync(templateFilePath, newFileName);
 
-#### upload.test.js
-```javascript
-import { extractContentControlTags } from './api/v1/service-now/integrations/upload';
-import fs from 'fs';
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
 
-jest.mock('fs');
+  return newFileName;
+};
 
-describe('extractContentControlTags', () => {
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
+module.exports = { processDocument };
+-------------------
 
-  test('should extract tags from the document', async () => {
-    const mockFilePath = 'mock-file-path';
-    const mockData = Buffer.from('mock data');
-    const mockTags = { tagName: 'TagValue' };
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+var xpath = require('xpath');
+var dom = require('@xmldom/xmldom').DOMParser;
+const xmlSerializer = require('@xmldom/xmldom').XMLSerializer;
 
-    fs.promises.readFile.mockResolvedValue(mockData);
+const readZipFile = (zipFilePath, fileName) => {
+    const zip = new AdmZip(zipFilePath);
+    const zipEntry = zip.getEntry(fileName);
+    const content = zipEntry.getData().toString('utf8');
+    return content;
+};
 
-    // Mock JSZip and xml2js methods here...
+const writeZipFile = (zipFilePath, fileName, content) => {
+    const zip = new AdmZip(zipFilePath);
+    zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+    zip.writeZip(zipFilePath);
+};
 
-    const result = await extractContentControlTags(mockFilePath);
-    
-    expect(result).toEqual(mockTags);
-    expect(fs.promises.readFile).toHaveBeenCalledTimes(1);
-    expect(fs.promises.readFile).toHaveBeenCalledWith(mockFilePath);
-  });
-});
-```
+const replacePlaceholder = (documentContent, jsonContent) => {
+    const doc = new dom().parseFromString(documentContent, 'text/xml');
+    const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
+    const tags = JSON.parse(jsonContent);
 
-#### Controller.test.js
-```javascript
-import { handleUpdateDocument, handleExtractTags } from './api/v1/service-now/integrations/controller';
-import * as PostData from './api/v1/service-now/integrations/PostData';
-import * as upload from './api/v1/service-now/integrations/upload';
-
-jest.mock('./api/v1/service-now/integrations/PostData');
-jest.mock('./api/v1/service-now/integrations/upload');
-
-describe('handleUpdateDocument', () => {
-  let req, res;
-
-  beforeEach(() => {
-    req = { body: { tagName: 'TagValue' } };
-    res = {
-      setHeader: jest.fn(),
-      status: jest.fn().mockReturnThis(),
-      send: jest.fn(),
-      json: jest.fn(),
+    const processTagValue = (value) => {
+        if (Array.isArray(value)) {
+            return value.map((item, index) => {
+                if (typeof item === 'string') {
+                    return `${index + 1}. ${item}`;
+                } else if (typeof item === 'object' && item.text) {
+                    return `${index + 1}. ${item.text}`;
+                }
+                return '';
+            }).join('\n');
+        } else if (typeof value === 'object' && value.text) {
+            return value.text;
+        }
+        return value;
     };
+
+    select("//w:sdt", doc).forEach(node => {
+        const tagNode = select('.//w:tag/@w:val', node)[0];
+        if (tagNode) {
+            const tagName = tagNode.value;
+            if (tags.hasOwnProperty(tagName)) {
+                const textNodes = select('.//w:t', node);
+                if (textNodes.length > 0) {
+                    const processedValue = processTagValue(tags[tagName]);
+                    const parts = processedValue.split('\n');
+
+                    // Clear existing text nodes
+                    textNodes.forEach((textNode, index) => {
+                        if (index === 0) {
+                            textNode.textContent = parts[0];
+                        } else {
+                            textNode.parentNode.removeChild(textNode);
+                        }
+                    });
+
+                    // Add new text nodes and line breaks
+                    for (let i = 1; i < parts.length; i++) {
+                        const breakNode = doc.createElement('w:br');
+                        const newTextNode = doc.createElement('w:t');
+                        newTextNode.textContent = parts[i];
+                        textNodes[0].parentNode.appendChild(breakNode);
+                        textNodes[0].parentNode.appendChild(newTextNode);
+                    }
+                }
+            }
+        }
+    });
+
+    const serializer = new xmlSerializer();
+    return serializer.serializeToString(doc);
+
+};
+
+const zipFilePath = './newdoc2.docx';
+const fileName = 'word/document.xml';
+const jsonPath = './myoutputk.json';
+
+const documentContent = readZipFile(zipFilePath, fileName);
+const jsonContent = fs.readFileSync(jsonPath, 'utf8');
+
+const updatedContent = replacePlaceholder(documentContent, jsonContent);
+writeZipFile(zipFilePath, fileName, updatedContent);
+
+
+console.log('Document updated successfully');
+=====================================
+
+//upload.js
+
+
+const fs = require('fs');
+const JSZip = require('jszip');
+const xml2js = require('xml2js');
+const path = require('path');
+const filePath = path.join(__dirname, './newdoc.docx');
+
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+const readFileContent = async (filePath) => {
+  return fs.promises.readFile(filePath);
+};
+
+const extractXmlFromZip = async (data) => {
+  const zip = await JSZip.loadAsync(data);
+  return zip.file('word/document.xml').async('text');
+};
+
+const parseXml = async (xmlContent) => {
+  const parser = new xml2js.Parser();
+  return parser.parseStringPromise(xmlContent);
+};
+
+const traverseNodes = (node, tags) => {
+  if (node['w:sdt']) {
+    node['w:sdt'].forEach(sdt => {
+      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
+      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
+      if (tag && tag['$'] && tag['$']['w:val']) {
+        const tagName = tag['$']['w:val'];
+        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
+        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
+        if (tagValue.trim() !== '') {
+          tags[tagName] = tagValue;
+        }
+      }
+    });
+  }
+  Object.values(node).forEach(value => {
+    if (Array.isArray(value)) {
+      value.forEach(child => traverseNodes(child, tags));
+    }
   });
+};
 
-  afterEach(() => {
-    jest.resetAllMocks();
+const extractTagValue = (content) => {
+  let text = '';
+  function traverseContent(contentNode) {
+    if (contentNode['w:t'] && Array.isArray(contentNode['w:t'])) {
+      contentNode['w:t'].forEach(textNode => {
+        if (typeof textNode === 'string') {
+          text += textNode;
+        } else if (textNode['_']) {
+          text += textNode['_'];
+        }
+      });
+    }
+    Object.values(contentNode).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseContent(child));
+      }
+    });
+  }
+  traverseContent(content);
+  return text;
+};
+
+const extractContentControlTags = async (filePath) => {
+  try {
+    const data = await readFileContent(filePath);
+    const documentXml = await extractXmlFromZip(data);
+    const xmlParsed = await parseXml(documentXml);
+
+    const tags = {};
+    const body = xmlParsed['w:document']['w:body'][0];
+    traverseNodes(body, tags);
+
+    return tags;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+};
+
+module.exports = { extractContentControlTags };
+----------
+const fs = require('fs');
+const JSZip = require('jszip');
+const xml2js = require('xml2js');
+
+async function extractContentControlTags(fpath) {
+  try {
+    const documentXml = await readDocumentXml(fpath);
+    const tags = await parseDocumentXml(documentXml);
+    saveTagsToFile(tags, 'myoutputk.json');
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+async function readDocumentXml(fpath) {
+  const data = fs.readFileSync(fpath);
+  const zip = await JSZip.loadAsync(data);
+  const documentXml = await zip.file('word/document.xml').async('text');
+  return documentXml;
+}
+
+async function parseDocumentXml(documentXml) {
+  const parser = new xml2js.Parser();
+  return new Promise((resolve, reject) => {
+    parser.parseString(documentXml, (err, result) => {
+      if (err) {
+        return reject(err);
+      }
+      const tags = extractTagsFromBody(result['w:document']['w:body'][0]);
+      resolve(tags);
+    });
   });
+}
 
-  test('should process document and send response', async () => {
-    const mockFilePath = 'mock-file-path';
-    PostData.processDocument.mockResolvedValue(mockFilePath);
+function extractTagsFromBody(body) {
+  const tags = {};
 
-    await handleUpdateDocument(req, res);
+  function traverseNodes(node) {
+    if (node['w:sdt']) {
+      node['w:sdt'].forEach(sdt => {
+        const tag = sdt['w:sdtPr'][0]['w:tag'];
+        if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
+          const tagName = tag[0]['$']['w:val'];
+          const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
+          if (typeof tagValue === 'string' && tagValue.trim() !== '') {
+            tags[tagName] = tagValue;
+          } else if (Array.isArray(tagValue) && tagValue.length > 0) {
+            tags[tagName] = tagValue;
+          }
+        }
+      });
+    }
+    Object.values(node).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseNodes(child));
+      }
+    });
+  }
 
-    expect(PostData.processDocument).toHaveBeenCalledTimes(1);
-    expect(PostData.processDocument).toHaveBeenCalledWith(req.body);
-    expect(res.setHeader).toHaveBeenCalled();
-  });
-});
+  traverseNodes(body);
+  return tags;
+}
 
-describe('handleExtractTags', () => {
-  let req, res;
+function extractTagValue(content) {
+  let text = '';
+  let listItems = [];
 
-  beforeEach(() => {
-    req = { file: { path: 'mock-file-path' } };
-    res = {
-      status: jest.fn().mockReturnThis(),
-      send: jest.fn(),
-      json: jest.fn(),
-    };
-  });
+  function traverseContent(contentNode) {
+    if (contentNode['w:p']) {
+      contentNode['w:p'].forEach(pNode => {
+        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
+          // Detect a numbered list item
+          const listItem = extractTextFromNode(pNode);
+          if (typeof listItem === 'string' && listItem.trim() !== '') {
+            listItems.push(listItem);
+          } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
+            listItems.push(listItem);
+          }
+        } else {
+          // Regular text node
+          const pText = extractTextFromNode(pNode);
+          if (typeof pText === 'string' && pText.trim() !== '') {
+            text += pText;
+          } else if (typeof pText === 'object' && pText.text.trim() !== '') {
+            text += pText.text;
+          }
+        }
+      });
+    }
+    Object.values(contentNode).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseContent(child));
+      }
+    });
+  }
 
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
+  function extractTextFromNode(node) {
+    let nodeText = '';
+    let highlighted = false;
 
-  test('should extract tags and send response', async () => {
-    const mockTags = { tagName: 'TagValue' };
-    upload.extractContentControlTags.mockResolvedValue(mockTags);
+    if (node['w:r']) {
+      node['w:r'].forEach(rNode => {
+        if (rNode['w:rPr'] && rNode['w:rPr'][0]['w:highlight']) {
+          highlighted = true;
+        }
+        if (rNode['w:t']) {
+          rNode['w:t'].forEach(textNode => {
+            if (typeof textNode === 'string') {
+              nodeText += textNode;
+            } else if (textNode['_']) {
+              nodeText += textNode['_'];
+            }
+          });
+        }
+      });
+    }
 
-    await handleExtractTags(req, res);
+    if (highlighted) {
+      return { text: nodeText, highlighted: true };
+    }
+    return nodeText;
+  }
 
-    expect(upload.extractContentControlTags).toHaveBeenCalledTimes(1);
-    expect(upload.extractContentControlTags).toHaveBeenCalledWith(req.file.path);
-    expect(res.json).toHaveBeenCalledWith(mockTags);
-  });
-});
-```
+  traverseContent(content);
 
-These are basic test cases to ensure the main functionality works. Adjust the mock implementations and assertions according to your actual code and its behavior.
+  if (listItems.length > 0) {
+    // Return list items as an array of strings or objects
+    return listItems;
+  } else {
+    return text;
+  }
+}
 
-### Explanation of Test Cases
+function saveTagsToFile(tags, outputPath) {
+  const jsonFile = JSON.stringify(tags, null, 2);
+  fs.writeFileSync(outputPath, jsonFile);
+}
 
-- **PostData.test.js**:
-  - Mocks `fs` methods to simulate file operations.
-  - Tests the `processDocument` function to ensure it processes the document and returns the correct file path.
-
-- **upload.test.js**:
-  - Mocks `fs` methods to simulate reading file content.
-  - Tests the `extractContentControlTags` function to ensure it extracts tags correctly from the document.
-
-- **Controller.test.js**:
-  - Mocks the methods from `PostData` and `upload` modules.
-  - Tests `handleUpdateDocument` and `handleExtractTags` functions to ensure they process requests and send correct responses.
-
-Make sure to adjust the test cases as per the actual functionality and behavior of your methods.
+const fpath = './Test Document.docx';
+extractContentControlTags(fpath);
