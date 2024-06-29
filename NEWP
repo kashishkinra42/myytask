@@ -1,5 +1,4 @@
 upload.js 
-
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
@@ -16,7 +15,12 @@ const readFileContent = async (filePath) => {
 
 const extractXmlFromZip = async (data) => {
   const zip = await JSZip.loadAsync(data);
-  return zip.file('word/document.xml').async('text');
+  // Ensure that 'word/document.xml' exists in the zip file
+  const documentXmlFile = zip.file('word/document.xml');
+  if (!documentXmlFile) {
+    throw new Error('word/document.xml not found in the ZIP archive');
+  }
+  return documentXmlFile.async('text');
 };
 
 const parseXml = async (xmlContent) => {
@@ -46,18 +50,6 @@ const traverseNodes = (node, tags) => {
   });
 };
 
-const extractTextFromNode = (node) => {
-  let text = '';
-  if (node['w:r']) {
-    node['w:r'].forEach(run => {
-      if (run['w:t']) {
-        text += run['w:t'].join('');
-      }
-    });
-  }
-  return text;
-};
-
 const extractTagValue = (content) => {
   let text = '';
   let listItems = [];
@@ -70,7 +62,7 @@ const extractTagValue = (content) => {
           if (typeof listItem === 'string' && listItem.trim() !== '') {
             listItems.push(listItem);
           } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
-            listItems.push(listItem);
+            listItems.push(listItem.text);
           }
         } else {
           // Regular text node
@@ -90,7 +82,23 @@ const extractTagValue = (content) => {
     });
   }
   traverseContent(content);
-  return text + (listItems.length ? '\n' + listItems.join('\n') : '');
+  return text || listItems.join('\n');
+};
+
+const extractTextFromNode = (node) => {
+  let text = '';
+  if (node['w:r']) {
+    node['w:r'].forEach(rNode => {
+      if (rNode['w:t']) {
+        rNode['w:t'].forEach(tNode => {
+          if (typeof tNode === 'string') {
+            text += tNode;
+          }
+        });
+      }
+    });
+  }
+  return text;
 };
 
 const extractContentControlTags = async (filePath) => {
@@ -111,6 +119,7 @@ const extractContentControlTags = async (filePath) => {
 };
 
 module.exports = { extractContentControlTags };
+
 
 
 app.js
