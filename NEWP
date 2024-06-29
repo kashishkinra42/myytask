@@ -1,99 +1,15 @@
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { v4: uuidv4 } = require('uuid');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const xpath = require('xpath');
-
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-const readZipFile = (zipFilePath, fileName) => {
-  const zip = new AdmZip(zipFilePath);
-  const zipEntry = zip.getEntry(fileName);
-  const content = zipEntry.getData().toString('utf8');
-  return content;
-};
-
-const writeZipFile = (zipFilePath, fileName, content) => {
-  const zip = new AdmZip(zipFilePath);
-  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
-  zip.writeZip(zipFilePath);
-};
-
-const processTagValue = (value) => {
-  if (Array.isArray(value)) {
-    return value.map((item, index) => {
-      if (typeof item === 'string') {
-        return `${index + 1}. ${item}`;
-      } else if (typeof item === 'object' && item.text) {
-        return `${index + 1}. ${item.text}`;
-      }
-      return '';
-    }).join('\n');
-  } else if (typeof value === 'object' && value.text) {
-    return value.text;
-  }
-  return value;
-};
-
-const replacePlaceholder = (documentContent, jsonContent) => {
-  log(`Entering replacePlaceholder`);
-  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
-  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
-  const tags = JSON.parse(jsonContent);
-
-  select("//w:sdt", doc).forEach(node => {
-    const tagNode = select('.//w:tag/@w:val', node)[0];
-    if (tagNode) {
-      const tagName = tagNode.value;
-      log(`Processing tag: ${tagName}`);
-      if (tags.hasOwnProperty(tagName)) {
-        const textNodes = select('.//w:t', node);
-        if (textNodes.length > 0) {
-          const processedValue = processTagValue(tags[tagName]);
-          const parts = processedValue.split('\n');
-
-          // Clear existing text nodes
-          textNodes.forEach((textNode, index) => {
-            if (index === 0) {
-              textNode.textContent = parts[0];
-            } else {
-              textNode.parentNode.removeChild(textNode);
-            }
-          });
-
-          // Add new text nodes and line breaks
-          for (let i = 1; i < parts.length; i++) {
-            const breakNode = doc.createElement('w:br');
-            const newTextNode = doc.createElement('w:t');
-            newTextNode.textContent = parts[i];
-            textNodes[0].parentNode.appendChild(breakNode);
-            textNodes[0].parentNode.appendChild(newTextNode);
-          }
-        }
-      }
-    }
-  });
-
-  const serializer = new XMLSerializer();
-  const updatedContent = serializer.serializeToString(doc);
-  log(`Exiting replacePlaceholder`);
-  return updatedContent;
-};
-
-const processDocument = async (jsonContent) => {
-  const templateFilePath = './Test Document.docx';
-  const fileName = 'word/document.xml';
-
-  const newFileName = `./updated_${uuidv4()}.docx`;
-  fs.copyFileSync(templateFilePath, newFileName);
-
-  const documentContent = readZipFile(newFileName, fileName);
-  const updatedContent = replacePlaceholder(documentContent, jsonContent);
-  writeZipFile(newFileName, fileName, updatedContent);
-
-  return newFileName;
-};
-
-module.exports = { processDocument };
+Z:\Desktop\work-addin>node app.js
+[2024-06-29T12:07:35.866Z] Server is running on port 3000
+[2024-06-29T12:07:55.789Z] Received JSON: {"Incident Number":"1234","Date":"6/13/2024","Authors":"Kashish kinraa","Status":"Mitigated","Summary":"This is the root cause","Impact":"This is the impact This is the impact","Root Causes":"This is the root cause","Trigger":"Hellohi","Change(s) that triggered the incident":"Hello hiHellohi","Resolution":"Hello hhi","Detection":"Helloi","Incident Theme":"Choose an item.","Link to the latest ORR":"Hello hilohi","SLO Impact":"Hello hi","What Went Well":"Kash","What Went Wrong":"Click or tap here to enter text.","Where We Got Lucky":["Kash","Kinra",{"text":"My name","highlighted":true},{"text":"Heloo","highlighted":true},"yes"],"F2":"Click or tap here to enter text."}
+[2024-06-29T12:07:55.831Z] Entering replacePlaceholder
+Error processing document: SyntaxError: "[object Object]" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at replacePlaceholder (Z:\Desktop\work-addin\PostData.js:121:21)
+    at processDocument (Z:\Desktop\work-addin\PostData.js:170:26)
+    at Z:\Desktop\work-addin\app.js:20:35
+    at Layer.handle [as handle_request] (Z:\Desktop\work-addin\node_modules\express\lib\router\layer.js:95:5)
+    at next (Z:\Desktop\work-addin\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (Z:\Desktop\work-addin\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (Z:\Desktop\work-addin\node_modules\express\lib\router\layer.js:95:5)
+    at Z:\Desktop\work-addin\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (Z:\Desktop\work-addin\node_modules\express\lib\router\index.js:346:12)
