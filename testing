@@ -1,217 +1,208 @@
-Sure, let's start by creating unit tests for each of the main modules: `PostData.js`, `upload.js`, and `controller.js`. I'll provide example tests using the `jest` testing framework and provide explanations for each line.
+Z:\Desktop\work-addin>npm fund
+work-addin@1.0.0
++-- https://github.com/sponsors/broofa
+|   `-- uuid@10.0.0
++-- https://github.com/sponsors/RubenVerborgh
+|   `-- follow-redirects@1.15.6
++-- https://github.com/sponsors/ljharb
+|   `-- qs@6.11.0, side-channel@1.0.6, call-bind@1.0.7, function-bind@1.1.2, define-data-property@1.1.4, gopd@1.0.1, has-property-descriptors@1.0.2, get-intrinsic@1.2.4, has-proto@1.0.3, has-symbols@1.0.3, object-inspect@1.13.2, resolve@1.22.8, is-core-module@2.14.0, supports-preserve-symlinks-flag@1.0.0, minimist@1.2.8
++-- https://github.com/sponsors/feross
+|   `-- safe-buffer@5.2.1
++-- https://github.com/sponsors/sindresorhus
+|   `-- import-local@3.1.0, ansi-escapes@4.3.2, type-fest@0.21.3, make-dir@4.0.0, p-limit@3.1.0, yocto-queue@0.1.0, get-stream@6.0.1, is-stream@2.0.1, onetime@5.1.2, parse-json@5.2.0, strip-json-comments@3.1.1, camelcase@6.3.0
++-- https://github.com/chalk/chalk?sponsor=1
+| | `-- chalk@4.1.2
+| `-- https://github.com/chalk/ansi-styles?sponsor=1
+|     `-- ansi-styles@4.3.0, ansi-styles@5.2.0
++-- https://github.com/sponsors/sibiraj-s
+|   `-- ci-info@3.9.0
++-- https://github.com/sponsors/isaacs
+|   `-- glob@7.2.3
++-- https://opencollective.com/babel
+| | `-- @babel/core@7.24.7
+| `-- https://opencollective.com/browserslist
+|     `-- browserslist@4.23.1, caniuse-lite@1.0.30001638, update-browserslist-db@1.0.16
++-- https://github.com/chalk/supports-color?sponsor=1
+|   `-- supports-color@8.1.1
++-- https://github.com/sindresorhus/execa?sponsor=1
+|   `-- execa@5.1.1
++-- https://github.com/sponsors/dubzzz
+|   `-- pure-rand@6.1.0
++-- https://github.com/sponsors/jonschlinkert
+|   `-- picomatch@2.3.1
++-- https://github.com/sindresorhus/emittery?sponsor=1
+|   `-- emittery@0.13.1
+`-- https://github.com/chalk/wrap-ansi?sponsor=1
+    `-- wrap-ansi@7.0.0
 
-### Setting Up Jest
-First, ensure you have Jest installed in your project. You can install it using npm:
 
-```sh
-npm install --save-dev jest
-```
+Z:\Desktop\work-addin>npm install jest --save -dev
+npm WARN config dev Please use --include=dev instead.
 
-Add a `test` script to your `package.json`:
+up to date in 3s
 
-```json
-{
-  "scripts": {
-    "test": "jest"
-  }
-}
-```
+46 packages are looking for funding
+  run `npm fund` for details
 
-### Unit Tests for `PostData.js`
-Create a new file called `PostData.test.js` in the same directory as `PostData.js`:
+Z:\Desktop\work-addin>npm install --save-dev jest
+npm WARN idealTree Removing dependencies.jest in favor of devDependencies.jest
 
-```javascript
-// PostData.test.js
-import fs from 'fs';
-import { processDocument } from './PostData';
-import AdmZip from 'adm-zip';
+up to date in 2s
 
-jest.mock('fs');
-jest.mock('adm-zip');
+46 packages are looking for funding
+  run `npm fund` for details
 
-describe('processDocument', () => {
-  it('should process and update the document with the given JSON content', async () => {
-    // Mock data
-    const jsonContent = { placeholder: 'replacement' };
-    const zipFilePath = 'path/to/template.docx';
-    const updatedFilePath = 'path/to/updated.docx';
-    const documentXml = '<w:document><w:body><w:sdt><w:sdtPr><w:tag w:val="placeholder"/></w:sdtPr><w:sdtContent><w:t>old value</w:t></w:sdtContent></w:sdt></w:body></w:document>';
-    const updatedXml = '<w:document><w:body><w:sdt><w:sdtPr><w:tag w:val="placeholder"/></w:sdtPr><w:sdtContent><w:t>replacement</w:t></w:sdtContent></w:sdt></w:body></w:document>';
+Z:\Desktop\work-addin>npm fund
+work-addin@1.0.0
++-- https://github.com/sponsors/broofa
+|   `-- uuid@10.0.0
++-- https://github.com/sponsors/RubenVerborgh
+|   `-- follow-redirects@1.15.6
++-- https://github.com/sponsors/ljharb
+|   `-- qs@6.11.0, side-channel@1.0.6, call-bind@1.0.7, function-bind@1.1.2, define-data-property@1.1.4, gopd@1.0.1, has-property-descriptors@1.0.2, get-intrinsic@1.2.4, has-proto@1.0.3, has-symbols@1.0.3, object-inspect@1.13.2, minimist@1.2.8, resolve@1.22.8, is-core-module@2.14.0, supports-preserve-symlinks-flag@1.0.0
++-- https://github.com/sponsors/feross
+|   `-- safe-buffer@5.2.1
++-- https://github.com/sponsors/sindresorhus
+|   `-- import-local@3.1.0, ansi-escapes@4.3.2, type-fest@0.21.3, make-dir@4.0.0, p-limit@3.1.0, yocto-queue@0.1.0, get-stream@6.0.1, is-stream@2.0.1, onetime@5.1.2, parse-json@5.2.0, strip-json-comments@3.1.1, camelcase@6.3.0
++-- https://github.com/chalk/chalk?sponsor=1
+| | `-- chalk@4.1.2
+| `-- https://github.com/chalk/ansi-styles?sponsor=1
+|     `-- ansi-styles@4.3.0, ansi-styles@5.2.0
++-- https://github.com/sponsors/sibiraj-s
+|   `-- ci-info@3.9.0
++-- https://github.com/sponsors/isaacs
+|   `-- glob@7.2.3
++-- https://opencollective.com/babel
+| | `-- @babel/core@7.24.7
+| `-- https://opencollective.com/browserslist
+|     `-- browserslist@4.23.1, caniuse-lite@1.0.30001638, update-browserslist-db@1.0.16
++-- https://github.com/chalk/supports-color?sponsor=1
+|   `-- supports-color@8.1.1
++-- https://github.com/sindresorhus/execa?sponsor=1
+|   `-- execa@5.1.1
++-- https://github.com/sponsors/dubzzz
+|   `-- pure-rand@6.1.0
++-- https://github.com/sponsors/jonschlinkert
+|   `-- picomatch@2.3.1
++-- https://github.com/sindresorhus/emittery?sponsor=1
+|   `-- emittery@0.13.1
+`-- https://github.com/chalk/wrap-ansi?sponsor=1
+    `-- wrap-ansi@7.0.0
 
-    // Mock fs and AdmZip behavior
-    fs.copyFileSync.mockImplementation(() => {});
-    fs.readFileSync.mockReturnValue(documentXml);
-    AdmZip.mockImplementation(() => ({
-      getEntry: jest.fn().mockReturnValue({
-        getData: jest.fn().mockReturnValue(Buffer.from(documentXml, 'utf8')),
-      }),
-      updateFile: jest.fn(),
-      writeZip: jest.fn(),
-    }));
 
-    // Mock uuid generation
-    jest.spyOn(global, 'Date').mockImplementation(() => ({
-      toISOString: jest.fn().mockReturnValue('mocked-uuid'),
-    }));
+Z:\Desktop\work-addin>npm test
 
-    const result = await processDocument(jsonContent);
+> work-addin@1.0.0 test
+> echo "Error: no test specified" && exit 1
 
-    // Expectations
-    expect(fs.copyFileSync).toHaveBeenCalledWith(zipFilePath, updatedFilePath);
-    expect(result).toBe(updatedFilePath);
-  });
-});
-```
+"Error: no test specified"
 
-**Explanation**:
-- **Imports and Mocking**: Import necessary modules and mock `fs` and `AdmZip` using `jest.mock()`.
-- **Test Case**: Define a test case that verifies `processDocument` correctly updates the document.
-- **Mock Data**: Set up mock data and mock behavior for `fs` and `AdmZip`.
-- **Test Execution and Expectations**: Call `processDocument` with mock data and assert that the expected file operations were performed correctly.
+Z:\Desktop\work-addin>npm test
 
-### Unit Tests for `upload.js`
-Create a new file called `upload.test.js` in the same directory as `upload.js`:
+> work-addin@1.0.0 test
+> jest
 
-```javascript
-// upload.test.js
-import fs from 'fs';
-import JSZip from 'jszip';
-import { extractContentControlTags } from './upload';
+ FAIL  ./upload.test.js
+  ● Test suite failed to run
 
-jest.mock('fs');
-jest.mock('jszip');
+    Jest encountered an unexpected token
 
-describe('extractContentControlTags', () => {
-  it('should extract content control tags from a DOCX file', async () => {
-    // Mock data
-    const filePath = 'path/to/file.docx';
-    const documentXml = '<w:document><w:body><w:sdt><w:sdtPr><w:tag w:val="placeholder"/></w:sdtPr><w:sdtContent><w:t>value</w:t></w:sdtContent></w:sdt></w:body></w:document>';
-    const zip = {
-      file: jest.fn().mockReturnValue({
-        async: jest.fn().mockResolvedValue(documentXml),
-      }),
-    };
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
 
-    // Mock fs and JSZip behavior
-    fs.promises.readFile.mockResolvedValue(Buffer.from('mocked data'));
-    JSZip.loadAsync.mockResolvedValue(zip);
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
 
-    const result = await extractContentControlTags(filePath);
+    By default "node_modules" folder is ignored by transformers.
 
-    // Expectations
-    expect(fs.promises.readFile).toHaveBeenCalledWith(filePath);
-    expect(JSZip.loadAsync).toHaveBeenCalledWith(Buffer.from('mocked data'));
-    expect(result).toEqual({ placeholder: 'value' });
-  });
-});
-```
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
 
-**Explanation**:
-- **Imports and Mocking**: Import necessary modules and mock `fs` and `JSZip` using `jest.mock()`.
-- **Test Case**: Define a test case that verifies `extractContentControlTags` correctly extracts tags.
-- **Mock Data**: Set up mock data and mock behavior for `fs` and `JSZip`.
-- **Test Execution and Expectations**: Call `extractContentControlTags` with mock data and assert that the extracted tags match the expected output.
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
 
-### Unit Tests for `controller.js`
-Create a new file called `controller.test.js` in the same directory as `controller.js`:
+    Details:
 
-```javascript
-// controller.test.js
-import fs from 'fs';
-import { handleUpdateDocument, handleExtractTags } from './controller';
-import { processDocument } from './PostData';
-import { extractContentControlTags } from './upload';
-import { log } from './handlers';
+    \\fwus454ns.ny.fw.gs.com\kinrak_newyork_firmwide\home\Desktop\work-addin\upload.test.js:10
+    import fs from 'fs';
+    ^^^^^^
 
-jest.mock('fs');
-jest.mock('./PostData');
-jest.mock('./upload');
-jest.mock('./handlers');
+    SyntaxError: Cannot use import statement outside a module
 
-describe('controller', () => {
-  describe('handleUpdateDocument', () => {
-    it('should process document and return the updated file', async () => {
-      // Mock request and response
-      const req = { body: { placeholder: 'replacement' } };
-      const res = {
-        setHeader: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn(),
-      };
+      at Runtime.createScriptFromCode (Z:/Desktop/work-addin/node_modules/jest-runtime/build/index.js:1505:14)
 
-      // Mock processDocument behavior
-      const updatedFilePath = 'path/to/updated.docx';
-      processDocument.mockResolvedValue(updatedFilePath);
-      fs.createReadStream.mockReturnValue({
-        pipe: jest.fn().mockImplementation((res) => {
-          res.on('finish', jest.fn());
-          return { on: jest.fn().mockImplementation((event, callback) => callback()) };
-        }),
-      });
+ FAIL  ./PostData.test.js
+  ● Test suite failed to run
 
-      await handleUpdateDocument(req, res);
+    Jest encountered an unexpected token
 
-      // Expectations
-      expect(processDocument).toHaveBeenCalledWith(req.body);
-      expect(res.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="updated_document.docx"');
-      expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      expect(res.send).toHaveBeenCalled();
-    });
-  });
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
 
-  describe('handleExtractTags', () => {
-    it('should extract tags from uploaded file', async () => {
-      // Mock request and response
-      const req = { file: { path: 'path/to/file.docx' } };
-      const res = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-        send: jest.fn(),
-      };
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
 
-      // Mock extractContentControlTags behavior
-      const extractedTags = { placeholder: 'value' };
-      extractContentControlTags.mockResolvedValue(extractedTags);
-      fs.unlinkSync.mockImplementation(() => {});
+    By default "node_modules" folder is ignored by transformers.
 
-      await handleExtractTags(req, res);
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
 
-      // Expectations
-      expect(extractContentControlTags).toHaveBeenCalledWith(req.file.path);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(extractedTags);
-      expect(fs.unlinkSync).toHaveBeenCalledWith(req.file.path);
-    });
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
 
-    it('should handle missing file error', async () => {
-      // Mock request and response
-      const req = { file: null };
-      const res = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn(),
-      };
+    Details:
 
-      await handleExtractTags(req, res);
+    \\fwus454ns.ny.fw.gs.com\kinrak_newyork_firmwide\home\Desktop\work-addin\PostData.test.js:10
+    import fs from 'fs';
+    ^^^^^^
 
-      // Expectations
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.send).toHaveBeenCalledWith('No file uploaded');
-    });
-  });
-});
-```
+    SyntaxError: Cannot use import statement outside a module
 
-**Explanation**:
-- **Imports and Mocking**: Import necessary modules and mock dependencies using `jest.mock()`.
-- **Test Cases**: Define test cases that verify `handleUpdateDocument` and `handleExtractTags` behavior.
-- **Mock Request and Response**: Set up mock request and response objects to simulate Express behavior.
-- **Test Execution and Expectations**: Call the controller functions with mock data and assert that the expected operations were performed correctly.
+      at Runtime.createScriptFromCode (Z:/Desktop/work-addin/node_modules/jest-runtime/build/index.js:1505:14)
 
-### Running the Tests
-To run the tests, use the following command:
+ FAIL  ./Controller.test.js
+  ● Test suite failed to run
 
-```sh
-npm test
-```
+    Jest encountered an unexpected token
 
-This command will execute all the test cases defined in the `PostData.test.js`, `upload.test.js`, and `controller.test.js` files, ensuring that your code behaves as expected.
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    \\fwus454ns.ny.fw.gs.com\kinrak_newyork_firmwide\home\Desktop\work-addin\Controller.test.js:12
+    import fs from 'fs';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      at Runtime.createScriptFromCode (Z:/Desktop/work-addin/node_modules/jest-runtime/build/index.js:1505:14)
+
+Test Suites: 3 failed, 3 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        21.036 s
+Ran all test suites.
