@@ -1,14 +1,8 @@
-To handle file uploads dynamically in `app.js` and to avoid hardcoding the filename, you can use the `multer` middleware for handling file uploads. Below is the combined and updated code for `upload.js` and `app.js`.
-
-### `upload.js`
-
-This script includes the functionality to extract content control tags from a Word document and also handles numbered lists properly:
-
-```javascript
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
 const path = require('path');
+const filePath = path.join(__dirname, './newdoc.docx');
 
 const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
@@ -131,48 +125,12 @@ const extractContentControlTags = async (filePath) => {
 };
 
 module.exports = { extractContentControlTags };
-```
 
-### `app.js`
-
-This script handles the file upload dynamically and uses the `upload.js` script to extract the tags:
-
-```javascript
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const { extractContentControlTags } = require('./upload');
-
-const app = express();
-const port = 3000;
-
-const upload = multer({ dest: 'uploads/' });
-
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
-  if (!req.file) {
-    log('No file received in the request');
-    return res.status(400).send('No file uploaded');
-  }
-
-  const filePath = req.file.path;
-  log(`Received file for extraction: ${filePath}`);
-
-  try {
-    const tags = await extractContentControlTags(filePath);
-    res.status(200).json(tags);
-  } catch (error) {
-    console.error('Error extracting tags:', error);
-    res.status(500).send('Error extracting tags');
-  } finally {
-    fs.unlinkSync(filePath);
-  }
-});
-
-app.listen(port, () => {
-  log(`Server is running on port ${port}`);
+// To run the extraction and save the tags to a JSON file:
+const outputPath = path.join(__dirname, 'myoutputk.json');
+extractContentControlTags(filePath).then(tags => {
+  fs.writeFileSync(outputPath, JSON.stringify(tags, null, 2));
+  log('Document tags extracted and saved successfully.');
+}).catch(error => {
+  log(`Error during extraction: ${error.message}`);
 });
