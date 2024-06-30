@@ -23,6 +23,28 @@ const parseXml = async (xmlContent) => {
   return parser.parseStringPromise(xmlContent);
 };
 
+const traverseNodes = (node, tags) => {
+  if (node['w:sdt']) {
+    node['w:sdt'].forEach(sdt => {
+      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
+      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
+      if (tag && tag['$'] && tag['$']['w:val']) {
+        const tagName = tag['$']['w:val'];
+        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
+        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
+        if (tagValue.trim() !== '') {
+          tags[tagName] = tagValue;
+        }
+      }
+    });
+  }
+  Object.values(node).forEach(value => {
+    if (Array.isArray(value)) {
+      value.forEach(child => traverseNodes(child, tags));
+    }
+  });
+};
+
 const extractTagValue = (content) => {
   let text = '';
   let listItems = [];
@@ -33,18 +55,18 @@ const extractTagValue = (content) => {
         if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
           // Detect a numbered list item
           const listItem = extractTextFromNode(pNode);
-          if (listItem) {
+          if (typeof listItem === 'string' && listItem.trim() !== '') {
+            listItems.push(listItem);
+          } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
             listItems.push(listItem);
           }
         } else {
           // Regular text node
           const pText = extractTextFromNode(pNode);
-          if (pText) {
-            if (typeof pText === 'string') {
-              text += pText;
-            } else {
-              text += pText.text;  // Append the text portion of the object
-            }
+          if (typeof pText === 'string' && pText.trim() !== '') {
+            text += pText;
+          } else if (typeof pText === 'object' && pText.text.trim() !== '') {
+            text += pText.text;
           }
         }
       });
@@ -62,9 +84,6 @@ const extractTagValue = (content) => {
 
     if (node['w:r']) {
       node['w:r'].forEach(rNode => {
-        if (rNode['w:rPr'] && rNode['w:rPr'][0]['w:highlight']) {
-          highlighted = true;
-        }
         if (rNode['w:t']) {
           rNode['w:t'].forEach(textNode => {
             if (typeof textNode === 'string') {
@@ -76,45 +95,16 @@ const extractTagValue = (content) => {
         }
       });
     }
-
-    if (highlighted) {
-      return { text: nodeText, highlighted: true };
-    }
     return nodeText;
   }
 
   traverseContent(content);
 
   if (listItems.length > 0) {
-    // Return list items as an array of objects with text and highlighted properties
     return listItems;
   } else {
-    return text.trim();
+    return text;
   }
-};
-
-const traverseNodes = (node, tags) => {
-  if (node['w:sdt']) {
-    node['w:sdt'].forEach(sdt => {
-      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
-      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
-      if (tag && tag['$'] && tag['$']['w:val']) {
-        const tagName = tag['$']['w:val'];
-        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
-        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
-        if (Array.isArray(tagValue)) {
-          tags[tagName] = tagValue;
-        } else if (typeof tagValue === 'string' && tagValue.trim() !== '') {
-          tags[tagName] = tagValue;
-        }
-      }
-    });
-  }
-  Object.values(node).forEach(value => {
-    if (Array.isArray(value)) {
-      value.forEach(child => traverseNodes(child, tags));
-    }
-  });
 };
 
 const extractTagsFromBody = (body) => {
@@ -127,9 +117,9 @@ const extractTagsFromBody = (body) => {
         if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          if (Array.isArray(tagValue)) {
+          if (typeof tagValue === 'string' && tagValue.trim() !== '') {
             tags[tagName] = tagValue;
-          } else if (typeof tagValue === 'string' && tagValue.trim() !== '') {
+          } else if (Array.isArray(tagValue) && tagValue.length > 0) {
             tags[tagName] = tagValue;
           }
         }
