@@ -24,7 +24,7 @@ const parseXml = async (xmlContent) => {
 };
 
 const extractTagValue = (content) => {
-  let textSegments = [];
+  let text = '';
   let listItems = [];
 
   function traverseContent(contentNode) {
@@ -40,7 +40,11 @@ const extractTagValue = (content) => {
           // Regular text node
           const pText = extractTextFromNode(pNode);
           if (pText) {
-            textSegments.push(pText);
+            if (typeof pText === 'string') {
+              text += pText;
+            } else {
+              text += pText.text;  // Append the text portion of the object
+            }
           }
         }
       });
@@ -76,21 +80,16 @@ const extractTagValue = (content) => {
     if (highlighted) {
       return { text: nodeText, highlighted: true };
     }
-    return { text: nodeText, highlighted: false };
+    return nodeText;
   }
 
   traverseContent(content);
 
   if (listItems.length > 0) {
-    // Return list items as an array of objects
-    return listItems.map(item => {
-      if (typeof item === 'string') {
-        return { text: item, highlighted: false };
-      }
-      return item;
-    });
+    // Return list items as an array of objects with text and highlighted properties
+    return listItems;
   } else {
-    return textSegments.map(segment => segment);
+    return text.trim();
   }
 };
 
@@ -104,13 +103,8 @@ const traverseNodes = (node, tags) => {
         const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
         const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
         if (Array.isArray(tagValue)) {
-          tags[tagName] = tagValue.map(segment => {
-            if (typeof segment === 'string') {
-              return { text: segment, highlighted: false };
-            }
-            return segment;
-          });
-        } else {
+          tags[tagName] = tagValue;
+        } else if (typeof tagValue === 'string' && tagValue.trim() !== '') {
           tags[tagName] = tagValue;
         }
       }
@@ -134,13 +128,8 @@ const extractTagsFromBody = (body) => {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
           if (Array.isArray(tagValue)) {
-            tags[tagName] = tagValue.map(segment => {
-              if (typeof segment === 'string') {
-                return { text: segment, highlighted: false };
-              }
-              return segment;
-            });
-          } else {
+            tags[tagName] = tagValue;
+          } else if (typeof tagValue === 'string' && tagValue.trim() !== '') {
             tags[tagName] = tagValue;
           }
         }
