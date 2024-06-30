@@ -1,19 +1,8 @@
-Sure, here are more specific `assert` function test cases for each function in the provided code. We'll write tests for the functions: `readZipFile`, `writeZipFile`, `processTagValue`, and `replacePlaceholder`. These tests will focus on the specific functionality of each function.
-
-First, ensure you have a testing framework like `mocha` installed. If not, you can install it using:
-
-```sh
-npm install mocha --save-dev
-```
-
-Now, let's create the test cases in a `test.js` file.
-
-```javascript
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const assert = require('assert');
 const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const { processTagValue, readZipFile, writeZipFile, replacePlaceholder, processDocument } = require('./your-module-file');
+const { processTagValue, readZipFile, writeZipFile, replacePlaceholder, processDocument } = require('../your-module-file'); // Update with your actual module path
 
 // Test data
 const sampleXml = `
@@ -29,7 +18,7 @@ const sampleXml = `
     </w:sdt>
   </w:body>
 </w:document>
-`;
+`.trim();
 
 const jsonContent = {
   sampleTag: "Replaced text"
@@ -65,7 +54,7 @@ describe('Document Processing Functions', () => {
     zip.writeZip('test.zip');
 
     const content = readZipFile('test.zip', 'test/document.xml');
-    assert.strictEqual(content, sampleXml);
+    assert.strictEqual(content.trim(), sampleXml);
 
     fs.unlinkSync('test.zip'); // Cleanup
   });
@@ -79,7 +68,7 @@ describe('Document Processing Functions', () => {
     writeZipFile('test.zip', 'test/document.xml', sampleXml);
 
     const content = readZipFile('test.zip', 'test/document.xml');
-    assert.strictEqual(content, sampleXml);
+    assert.strictEqual(content.trim(), sampleXml);
 
     fs.unlinkSync('test.zip'); // Cleanup
   });
@@ -106,12 +95,12 @@ describe('Document Processing Functions', () => {
 
   it('replacePlaceholder should handle empty JSON content gracefully', () => {
     const updatedContent = replacePlaceholder(sampleXml, {});
-    assert.strictEqual(updatedContent.trim(), sampleXml.trim());
+    assert.strictEqual(updatedContent.trim(), sampleXml);
   });
 
   it('replacePlaceholder should handle missing tag values in JSON content gracefully', () => {
     const updatedContent = replacePlaceholder(sampleXml, { differentTag: "Different text" });
-    assert.strictEqual(updatedContent.trim(), sampleXml.trim());
+    assert.strictEqual(updatedContent.trim(), sampleXml);
   });
 
   // Tests for processDocument
@@ -136,12 +125,10 @@ describe('Document Processing Functions', () => {
   it('processDocument should handle missing template file gracefully', async () => {
     try {
       await processDocument(jsonContent);
+      assert.fail('Expected error was not thrown');
     } catch (error) {
       assert.strictEqual(error.code, 'ENOENT');
     }
   });
 
 });
-```
-
-This code creates individual tests for each function, checking various scenarios to ensure they handle expected and edge cases properly. Each test uses the `assert` module to compare the actual output of the function to the expected output. These tests cover the normal operation, error handling, and edge cases for each function.
