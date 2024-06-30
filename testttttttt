@@ -1,113 +1,125 @@
-Z:\Desktop\work-addin>npx mocha posttest.js
+It looks like the test cases are failing primarily because the functions are not properly imported from your module file. Additionally, there is an error indicating that `Cannot read properties of null (reading 'getData')`, which suggests that `zip.getEntry(fileName)` might be returning `null` because the entry doesn't exist in the zip file.
 
+Let's start by ensuring all the functions are correctly defined and exported in `PostData.js`. Then, we will update the test file to correctly import and test these functions.
 
-  Document Processing Functions
-    1) processTagValue should return concatenated strings for an array of strings
-    2) processTagValue should return text from an object with a text property
-    3) processTagValue should return the input if it is a plain string
-    4) processTagValue should return an empty string for unrecognized input
-    5) readZipFile should read the correct file content from the zip
-    6) writeZipFile should write the correct file content to the zip
-    7) replacePlaceholder should replace placeholders with provided JSON content
-    8) replacePlaceholder should handle empty JSON content gracefully
-    9) replacePlaceholder should handle missing tag values in JSON content gracefully
-    10) processDocument should process the document and produce a new file
-processDocument error: TypeError: Cannot read properties of null (reading 'getData')
-    at readZipFile (Z:\Desktop\work-addin\PostData.js:91:28)
-    at processDocument (Z:\Desktop\work-addin\PostData.js:168:27)
-    at Context.<anonymous> (Z:\Desktop\work-addin\posttest.js:137:13)
-    at callFn (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:366:21)
-    at Runnable.run (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:354:5)
-    at Runner.runTest (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:677:10)
-    at Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:800:12
-    at next (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:592:14)
-    at Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:602:7
-    at next (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:485:14)
-    at Immediate.<anonymous> (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:570:5)
-    at process.processImmediate (node:internal/timers:478:21)
-    11) processDocument should handle missing template file gracefully
+### Step 1: Define and Export Functions Correctly
 
+Ensure `PostData.js` exports all the functions correctly:
 
-  0 passing (498ms)
-  11 failing
+```javascript
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
 
-  1) Document Processing Functions
-       processTagValue should return concatenated strings for an array of strings:
-     TypeError: processTagValue is not a function
-      at Context.<anonymous> (posttest.js:31:20)
-      at process.processImmediate (node:internal/timers:478:21)
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
 
-  2) Document Processing Functions
-       processTagValue should return text from an object with a text property:
-     TypeError: processTagValue is not a function
-      at Context.<anonymous> (posttest.js:37:20)
-      at process.processImmediate (node:internal/timers:478:21)
+const readZipFile = (zipFilePath, fileName) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(fileName);
+  if (!zipEntry) {
+    throw new Error(`File ${fileName} not found in ${zipFilePath}`);
+  }
+  const content = zipEntry.getData().toString('utf8');
+  return content;
+};
 
-  3) Document Processing Functions
-       processTagValue should return the input if it is a plain string:
-     TypeError: processTagValue is not a function
-      at Context.<anonymous> (posttest.js:43:20)
-      at process.processImmediate (node:internal/timers:478:21)
+const writeZipFile = (zipFilePath, fileName, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
 
-  4) Document Processing Functions
-       processTagValue should return an empty string for unrecognized input:
-     TypeError: processTagValue is not a function
-      at Context.<anonymous> (posttest.js:49:20)
-      at process.processImmediate (node:internal/timers:478:21)
+const processTagValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => {
+      if (typeof item === 'string') {
+        return `${index + 1}. ${item}`;
+      } else if (typeof item === 'object' && item.text) {
+        return `${index + 1}. ${item.text}`;
+      }
+      return '';
+    }).join('\n');
+  } else if (typeof value === 'object' && value.text) {
+    return value.text;
+  }
+  return value;
+};
 
-  5) Document Processing Functions
-       readZipFile should read the correct file content from the zip:
-     TypeError: readZipFile is not a function
-      at Context.<anonymous> (posttest.js:60:21)
-      at process.processImmediate (node:internal/timers:478:21)
+const replacePlaceholder = (documentContent, jsonContent) => {
+  log(`Entering replacePlaceholder`);
+  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
 
-  6) Document Processing Functions
-       writeZipFile should write the correct file content to the zip:
-     TypeError: writeZipFile is not a function
-      at Context.<anonymous> (posttest.js:73:5)
-      at process.processImmediate (node:internal/timers:478:21)
+  select("//w:sdt", doc).forEach(node => {
+    const tagNode = select('.//w:tag/@w:val', node)[0];
+    if (tagNode) {
+      const tagName = tagNode.value;
+      log(`Processing tag: ${tagName}`);
+      if (jsonContent.hasOwnProperty(tagName)) {
+        const textNodes = select('.//w:t', node);
+        if (textNodes.length > 0) {
+          const processedValue = processTagValue(jsonContent[tagName]);
+          const parts = processedValue.split('\n');
 
-  7) Document Processing Functions
-       replacePlaceholder should replace placeholders with provided JSON content:
-     TypeError: replacePlaceholder is not a function
-      at Context.<anonymous> (posttest.js:84:28)
-      at process.processImmediate (node:internal/timers:478:21)
+          // Clear existing text nodes
+          textNodes.forEach((textNode, index) => {
+            if (index === 0) {
+              textNode.textContent = parts[0];
+            } else {
+              textNode.parentNode.removeChild(textNode);
+            }
+          });
 
-  8) Document Processing Functions
-       replacePlaceholder should handle empty JSON content gracefully:
-     TypeError: replacePlaceholder is not a function
-      at Context.<anonymous> (posttest.js:104:28)
-      at process.processImmediate (node:internal/timers:478:21)
+          // Add new text nodes and line breaks
+          for (let i = 1; i < parts.length; i++) {
+            const breakNode = doc.createElement('w:br');
+            const newTextNode = doc.createElement('w:t');
+            newTextNode.textContent = parts[i];
+            textNodes[0].parentNode.appendChild(breakNode);
+            textNodes[0].parentNode.appendChild(newTextNode);
+          }
+        }
+      }
+    }
+  });
 
-  9) Document Processing Functions
-       replacePlaceholder should handle missing tag values in JSON content gracefully:
-     TypeError: replacePlaceholder is not a function
-      at Context.<anonymous> (posttest.js:110:28)
-      at process.processImmediate (node:internal/timers:478:21)
+  const serializer = new XMLSerializer();
+  const updatedContent = serializer.serializeToString(doc);
+  log(`Exiting replacePlaceholder`);
+  return updatedContent;
+};
 
-  10) Document Processing Functions
-       processDocument should process the document and produce a new file:
-     TypeError: Cannot read properties of null (reading 'getData')
-      at readZipFile (PostData.js:91:28)
-      at processDocument (PostData.js:168:27)
-      at Context.<anonymous> (posttest.js:122:31)
-      at process.processImmediate (node:internal/timers:478:21)
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './Test Document.docx';
+  const fileName = 'word/document.xml';
 
-  11) Document Processing Functions
-       processDocument should handle missing template file gracefully:
-     AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
-+ actual - expected
+  const newFileName = `./updated_${uuidv4()}.docx`;
+  fs.copyFileSync(templateFilePath, newFileName);
 
-+ undefined
-- 'ENOENT'
-      at Context.<anonymous> (posttest.js:141:14)
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
 
-where the code is :- 
+  return newFileName;
+};
+
+module.exports = { processTagValue, readZipFile, writeZipFile, replacePlaceholder, processDocument };
+```
+
+### Step 2: Update the Test File
+
+Update `posttest.js` to ensure all functions are correctly imported and tested:
+
+```javascript
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const assert = require('assert');
 const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const { processTagValue, readZipFile, writeZipFile, replacePlaceholder, processDocument } = require('./PostData'); // Update this path
+const { processTagValue, readZipFile, writeZipFile, replacePlaceholder, processDocument } = require('./PostData');
 
 // Test data
 const sampleXml = `
@@ -220,6 +232,8 @@ describe('Document Processing Functions', () => {
   // Tests for processDocument
   it('processDocument should process the document and produce a new file', async () => {
     // Setup: Create a sample docx with necessary structure
+
+
     const zip = new AdmZip();
     zip.addFile('word/document.xml', Buffer.from(sampleXml, 'utf8'));
     zip.writeZip('Test Document.docx');
@@ -248,3 +262,6 @@ describe('Document Processing Functions', () => {
   });
 
 });
+```
+
+By ensuring that all functions are correctly defined and exported in `PostData.js` and imported in `posttest.js`, the tests should now properly reference the functions and run as expected. Additionally, error handling is improved by checking if `zip.getEntry` returns `null`. This should help in diagnosing the issues more clearly.
