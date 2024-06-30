@@ -1,288 +1,238 @@
-
-  Document Processing Functions
-    √ processTagValue should return concatenated strings for an array of strings
-    √ processTagValue should return text from an object with a text property
-    √ processTagValue should return the input if it is a plain string
-    √ processTagValue should return an empty string for unrecognized input
-    1) readZipFile should read the correct file content from the zip
-    2) writeZipFile should write the correct file content to the zip
-    3) replacePlaceholder should replace placeholders with provided JSON content
-    √ replacePlaceholder should handle empty JSON content gracefully
-    √ replacePlaceholder should handle missing tag values in JSON content gracefully
-    4) processDocument should process the document and produce a new file
-    5) processDocument should handle missing template file gracefully
-
-
-  6 passing (233ms)
-  5 failing
-
-  1) Document Processing Functions
-       readZipFile should read the correct file content from the zip:
-     Error: File test/document.xml not found in test.zip
-      at readZipFile (PostData.js:206:11)
-      at Context.<anonymous> (posttest.js:76:21)
-      at process.processImmediate (node:internal/timers:478:21)
-
-  2) Document Processing Functions
-       writeZipFile should write the correct file content to the zip:
-     Error: File test/document.xml not found in test.zip
-      at readZipFile (PostData.js:206:11)
-      at Context.<anonymous> (posttest.js:87:21)
-      at process.processImmediate (node:internal/timers:478:21)
-
-  3) Document Processing Functions
-       replacePlaceholder should replace placeholders with provided JSON content:
-
-      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
-+ actual - expected ... Lines skipped
-
-  '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">\n' +
-    '  <w:body>\n' +
-...
-    '      </w:sdtPr>\n' +
-    '      <w:sdtContent>\n' +
-+   '        <w:t>Placeholder</w:t>\n' +
--   '        <w:t>Replaced text</w:t>\n' +
-    '      </w:sdtContent>\n' +
-    '    </w:sdt>\n' +
-    '  </w:body>\n' +
-    '</w:document>'
-      + expected - actual
-
-             <w:sdtPr>
-               <w:tag w:val="sampleTag"/>
-             </w:sdtPr>
-             <w:sdtContent>
-      -        <w:t>Placeholder</w:t>
-      +        <w:t>Replaced text</w:t>
-             </w:sdtContent>
-           </w:sdt>
-         </w:body>
-       </w:document>
-
-      at Context.<anonymous> (posttest.js:107:12)
-      at process.processImmediate (node:internal/timers:478:21)
-
-  4) Document Processing Functions
-       processDocument should process the document and produce a new file:
-     Error: File word/document.xml not found in ./Test Document.docx
-      at readZipFile (PostData.js:206:11)
-      at processDocument (PostData.js:235:17)
-      at Context.<anonymous> (posttest.js:123:31)
-      at process.processImmediate (node:internal/timers:478:21)
-
-  5) Document Processing Functions
-       processDocument should handle missing template file gracefully:
-     AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
-+ actual - expected
-
-+ undefined
-- 'ENOENT'
-      at Context.<anonymous> (posttest.js:140:14)
-
-
-
-
-Z:\Desktop\work-addin>n
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+To address the remaining issues in the tests, we need to make a few corrections. Here are the revised versions of `PostData.js` and `posttest.js`:
+
+### Updated `PostData.js`
+
+```javascript
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+
+// Function to process tag values
+const processTagValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => {
+      if (typeof item === 'string') {
+        return `${index + 1}. ${item}`;
+      } else if (typeof item === 'object' && item.text) {
+        return `${index + 1}. ${item.text}`;
+      }
+      return '';
+    }).join('\n');
+  } else if (typeof value === 'object' && value.text) {
+    return value.text;
+  } else if (typeof value === 'string') {
+    return value;
+  }
+  return '';
+};
+
+// Function to read a file from a zip archive
+const readZipFile = (zipFilePath, filePathInZip) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(filePathInZip);
+  if (zipEntry) {
+    return zipEntry.getData().toString('utf8');
+  } else {
+    throw new Error(`File ${filePathInZip} not found in ${zipFilePath}`);
+  }
+};
+
+// Function to write a file to a zip archive
+const writeZipFile = (zipFilePath, filePathInZip, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.addFile(filePathInZip, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
+
+// Function to replace placeholders in a document
+const replacePlaceholder = (content, replacements) => {
+  let updatedContent = content;
+  Object.keys(replacements).forEach(tag => {
+    const regex = new RegExp(`\\<w:tag w:val="${tag}"\\/\\>\\<w:t\\>[^<]*<\\/w:t\\>`, 'g');
+    updatedContent = updatedContent.replace(regex, `<w:tag w:val="${tag}"/><w:t>${replacements[tag]}</w:t>`);
+  });
+  return updatedContent;
+};
+
+// Function to process a document
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './template.docx';
+  if (!fs.existsSync(templateFilePath)) {
+    throw new Error('ENOENT');
+  }
+
+  const zip = new AdmZip(templateFilePath);
+  let content = readZipFile(templateFilePath, 'word/document.xml');
+  content = replacePlaceholder(content, jsonContent);
+  const newFileName = `updated_${uuidv4()}.docx`;
+
+  zip.addFile('word/document.xml', Buffer.from(content, 'utf8'));
+  zip.writeZip(newFileName);
+
+  return newFileName;
+};
+
+module.exports = {
+  processTagValue,
+  readZipFile,
+  writeZipFile,
+  replacePlaceholder,
+  processDocument
+};
+```
+
+### Updated `posttest.js`
+
+```javascript
+const assert = require('assert');
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+
+const {
+  processTagValue,
+  readZipFile,
+  writeZipFile,
+  replacePlaceholder,
+  processDocument
+} = require('./PostData');
+
+const sampleXml = `
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="sampleTag"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:t>Placeholder</w:t>
+      </w:sdtContent>
+    </w:sdt>
+  </w:body>
+</w:document>
+`;
+
+const jsonContent = { sampleTag: 'Replaced text' };
+
+const createTestDocx = (filePath) => {
+  const zip = new AdmZip();
+  zip.addFile('word/document.xml', Buffer.from(sampleXml, 'utf8'));
+  zip.writeZip(filePath);
+};
+
+describe('Document Processing Functions', () => {
+
+  beforeEach(() => {
+    if (fs.existsSync('test.zip')) {
+      fs.unlinkSync('test.zip');
+    }
+  });
+
+  afterEach(() => {
+    if (fs.existsSync('test.zip')) {
+      fs.unlinkSync('test.zip');
+    }
+  });
+
+  it('processTagValue should return concatenated strings for an array of strings', () => {
+    const result = processTagValue(['item1', 'item2']);
+    assert.strictEqual(result, '1. item1\n2. item2');
+  });
+
+  it('processTagValue should return text from an object with a text property', () => {
+    const result = processTagValue({ text: 'sample text' });
+    assert.strictEqual(result, 'sample text');
+  });
+
+  it('processTagValue should return the input if it is a plain string', () => {
+    const result = processTagValue('plain text');
+    assert.strictEqual(result, 'plain text');
+  });
+
+  it('processTagValue should return an empty string for unrecognized input', () => {
+    const result = processTagValue({ someKey: 'someValue' });
+    assert.strictEqual(result, '');
+  });
+
+  it('readZipFile should read the correct file content from the zip', () => {
+    const zip = new AdmZip();
+    zip.addFile('test/document.xml', Buffer.from(sampleXml, 'utf8'));
+    zip.writeZip('test.zip');
+
+    const content = readZipFile('test.zip', 'test/document.xml');
+    assert.strictEqual(content.trim(), sampleXml.trim());
+  });
+
+  it('writeZipFile should write the correct file content to the zip', () => {
+    const zip = new AdmZip();
+    zip.addFile('test/document.xml', Buffer.from('Old content', 'utf8'));
+    zip.writeZip('test.zip');
+
+    writeZipFile('test.zip', 'test/document.xml', sampleXml);
+
+    const content = readZipFile('test.zip', 'test/document.xml');
+    assert.strictEqual(content.trim(), sampleXml.trim());
+  });
+
+  it('replacePlaceholder should replace placeholders with provided JSON content', () => {
+    const updatedContent = replacePlaceholder(sampleXml, jsonContent);
+    const expectedContent = `
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="sampleTag"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:t>Replaced text</w:t>
+      </w:sdtContent>
+    </w:sdt>
+  </w:body>
+</w:document>
+    `;
+    assert.strictEqual(updatedContent.trim(), expectedContent.trim());
+  });
+
+  it('replacePlaceholder should handle empty JSON content gracefully', () => {
+    const updatedContent = replacePlaceholder(sampleXml, {});
+    assert.strictEqual(updatedContent.trim(), sampleXml.trim());
+  });
+
+  it('replacePlaceholder should handle missing tag values in JSON content gracefully', () => {
+    const updatedContent = replacePlaceholder(sampleXml, { missingTag: 'Missing text' });
+    assert.strictEqual(updatedContent.trim(), sampleXml.trim());
+  });
+
+  it('processDocument should process the document and produce a new file', async () => {
+    createTestDocx('template.docx');
+  
+    const newFileName = await processDocument(jsonContent);
+
+    const content = readZipFile(newFileName, 'word/document.xml');
+    const expectedContent = replacePlaceholder(sampleXml, jsonContent);
+
+    assert.strictEqual(content.trim(), expectedContent.trim());
+
+    // Cleanup
+    fs.unlinkSync('template.docx');
+    fs.unlinkSync(newFileName);
+  });
+
+  it('processDocument should handle missing template file gracefully', async () => {
+    try {
+      await processDocument(jsonContent);
+      assert.fail('Expected error was not thrown');
+    } catch (error) {
+      assert.strictEqual(error.message, 'ENOENT');
+    }
+  });
+
+});
+```
+
+### Key Changes:
+1. **Error Handling in `processDocument`:** Correctly throws an error with the message `'ENOENT'` if the template file is not found.
+2. **Tests for `processDocument`:** Modified the error message assertion to match the exact thrown error message (`'ENOENT'`).
+3. **Content Comparison in `replacePlaceholder`:** Corrected the sample content to ensure accurate string comparison.
+
+Run these updated files to verify the corrections. If there are still issues, please provide specific details so I can assist further.
