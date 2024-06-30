@@ -1,28 +1,182 @@
-in test zip 
-This page contains the following errors:
-error on line 1 at column 1: Start tag expected, '<' not found
-Below is a rendering of the page up to the first error.
+Sure! Here are the updated versions of `PostData.js` and `posttest.js` with the necessary corrections.
 
-===========
-Z:\Desktop\work-addin>npx mocha posttest.js
+### Updated `PostData.js`
 
+```javascript
+const fs = require('fs');
+const AdmZip = require('adm-zip');
 
-  Document Processing Functions
-processTagValue result: 1. item1
-2. item2
-    √ processTagValue should return concatenated strings for an array of strings
-processTagValue result: sample text
-    √ processTagValue should return text from an object with a text property
-processTagValue result: plain text
-    √ processTagValue should return the input if it is a plain string
-processTagValue result: { someKey: 'someValue' }
-    1) processTagValue should return an empty string for unrecognized input
-    2) readZipFile should read the correct file content from the zip
-    3) writeZipFile should write the correct file content to the zip
-[2024-06-30T16:44:07.424Z] Entering replacePlaceholder
-[2024-06-30T16:44:07.431Z] Processing tag: sampleTag
-[2024-06-30T16:44:07.432Z] Exiting replacePlaceholder
-replacePlaceholder updatedContent: <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+// Function to process tag values
+const processTagValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => {
+      if (typeof item === 'string') {
+        return `${index + 1}. ${item}`;
+      } else if (typeof item === 'object' && item.text) {
+        return `${index + 1}. ${item.text}`;
+      }
+      return '';
+    }).join('\n');
+  } else if (typeof value === 'object' && value.text) {
+    return value.text;
+  } else if (typeof value === 'string') {
+    return value;
+  }
+  return '';
+};
+
+// Function to read a file from a zip archive
+const readZipFile = (zipFilePath, filePathInZip) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(filePathInZip);
+  if (zipEntry) {
+    return zipEntry.getData().toString('utf8');
+  } else {
+    throw new Error(`File ${filePathInZip} not found in ${zipFilePath}`);
+  }
+};
+
+// Function to write a file to a zip archive
+const writeZipFile = (zipFilePath, filePathInZip, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.addFile(filePathInZip, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
+
+// Function to replace placeholders in a document
+const replacePlaceholder = (content, replacements) => {
+  let updatedContent = content;
+  Object.keys(replacements).forEach(tag => {
+    const regex = new RegExp(`\\<w:tag w:val="${tag}"\\/\\>\\<w:t\\>[^<]*<\\/w:t\\>`, 'g');
+    updatedContent = updatedContent.replace(regex, `<w:tag w:val="${tag}"/><w:t>${replacements[tag]}</w:t>`);
+  });
+  return updatedContent;
+};
+
+// Function to process a document
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './template.docx';
+  if (!fs.existsSync(templateFilePath)) {
+    throw new Error('Template file not found');
+  }
+
+  const zip = new AdmZip(templateFilePath);
+  let content = readZipFile(templateFilePath, 'word/document.xml');
+  content = replacePlaceholder(content, jsonContent);
+  const newFileName = `updated_${uuidv4()}.docx`;
+
+  zip.addFile('word/document.xml', Buffer.from(content, 'utf8'));
+  zip.writeZip(newFileName);
+
+  return newFileName;
+};
+
+module.exports = {
+  processTagValue,
+  readZipFile,
+  writeZipFile,
+  replacePlaceholder,
+  processDocument
+};
+```
+
+### Updated `posttest.js`
+
+```javascript
+const assert = require('assert');
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+
+const {
+  processTagValue,
+  readZipFile,
+  writeZipFile,
+  replacePlaceholder,
+  processDocument
+} = require('./PostData');
+
+const sampleXml = `
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="sampleTag"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:t>Placeholder</w:t>
+      </w:sdtContent>
+    </w:sdt>
+  </w:body>
+</w:document>
+`;
+
+const jsonContent = { sampleTag: 'Replaced text' };
+
+const createTestDocx = (filePath) => {
+  const zip = new AdmZip();
+  zip.addFile('word/document.xml', Buffer.from(sampleXml, 'utf8'));
+  zip.writeZip(filePath);
+};
+
+describe('Document Processing Functions', () => {
+
+  beforeEach(() => {
+    if (fs.existsSync('test.zip')) {
+      fs.unlinkSync('test.zip');
+    }
+  });
+
+  afterEach(() => {
+    if (fs.existsSync('test.zip')) {
+      fs.unlinkSync('test.zip');
+    }
+  });
+
+  it('processTagValue should return concatenated strings for an array of strings', () => {
+    const result = processTagValue(['item1', 'item2']);
+    assert.strictEqual(result, '1. item1\n2. item2');
+  });
+
+  it('processTagValue should return text from an object with a text property', () => {
+    const result = processTagValue({ text: 'sample text' });
+    assert.strictEqual(result, 'sample text');
+  });
+
+  it('processTagValue should return the input if it is a plain string', () => {
+    const result = processTagValue('plain text');
+    assert.strictEqual(result, 'plain text');
+  });
+
+  it('processTagValue should return an empty string for unrecognized input', () => {
+    const result = processTagValue({ someKey: 'someValue' });
+    assert.strictEqual(result, '');
+  });
+
+  it('readZipFile should read the correct file content from the zip', () => {
+    const zip = new AdmZip();
+    zip.addFile('test/document.xml', Buffer.from(sampleXml, 'utf8'));
+    zip.writeZip('test.zip');
+
+    const content = readZipFile('test.zip', 'test/document.xml');
+    assert.strictEqual(content.trim(), sampleXml);
+  });
+
+  it('writeZipFile should write the correct file content to the zip', () => {
+    const zip = new AdmZip();
+    zip.addFile('test/document.xml', Buffer.from('Old content', 'utf8'));
+    zip.writeZip('test.zip');
+
+    writeZipFile('test.zip', 'test/document.xml', sampleXml);
+
+    const content = readZipFile('test.zip', 'test/document.xml');
+    assert.strictEqual(content.trim(), sampleXml);
+  });
+
+  it('replacePlaceholder should replace placeholders with provided JSON content', () => {
+    const updatedContent = replacePlaceholder(sampleXml, jsonContent);
+    const expectedContent = `
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:body>
     <w:sdt>
       <w:sdtPr>
@@ -34,98 +188,45 @@ replacePlaceholder updatedContent: <w:document xmlns:w="http://schemas.openxmlfo
     </w:sdt>
   </w:body>
 </w:document>
-    √ replacePlaceholder should replace placeholders with provided JSON content
-[2024-06-30T16:44:07.435Z] Entering replacePlaceholder
-[2024-06-30T16:44:07.437Z] Processing tag: sampleTag
-[2024-06-30T16:44:07.437Z] Exiting replacePlaceholder
-replacePlaceholder with empty JSON content: <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="sampleTag"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:t>Placeholder</w:t>
-      </w:sdtContent>
-    </w:sdt>
-  </w:body>
-</w:document>
-    √ replacePlaceholder should handle empty JSON content gracefully
-[2024-06-30T16:44:07.439Z] Entering replacePlaceholder
-[2024-06-30T16:44:07.440Z] Processing tag: sampleTag
-[2024-06-30T16:44:07.441Z] Exiting replacePlaceholder
-replacePlaceholder with missing tag values: <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="sampleTag"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:t>Placeholder</w:t>
-      </w:sdtContent>
-    </w:sdt>
-  </w:body>
-</w:document>
-    √ replacePlaceholder should handle missing tag values in JSON content gracefully
-    4) processDocument should process the document and produce a new file
-processDocument error: Error: File word/document.xml not found in ./updated_84558c54-4b29-4f07-b9f5-aeb84e033281.docx
-    at readZipFile (Z:\Desktop\work-addin\PostData.js:191:11)
-    at processDocument (Z:\Desktop\work-addin\PostData.js:270:27)
-    at Context.<anonymous> (Z:\Desktop\work-addin\posttest.js:139:13)
-    at callFn (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:366:21)
-    at Runnable.run (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:354:5)
-    at Runner.runTest (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:677:10)
-    at Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:800:12
-    at next (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:592:14)
-    at Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:602:7
-    at next (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:485:14)
-    at Immediate.<anonymous> (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:570:5)
-    at process.processImmediate (node:internal/timers:478:21)
-    5) processDocument should handle missing template file gracefully
+    `;
+    assert.strictEqual(updatedContent.trim(), expectedContent.trim());
+  });
 
+  it('replacePlaceholder should handle empty JSON content gracefully', () => {
+    const updatedContent = replacePlaceholder(sampleXml, {});
+    assert.strictEqual(updatedContent.trim(), sampleXml.trim());
+  });
 
-  6 passing (273ms)
-  5 failing
+  it('replacePlaceholder should handle missing tag values in JSON content gracefully', () => {
+    const updatedContent = replacePlaceholder(sampleXml, { missingTag: 'Missing text' });
+    assert.strictEqual(updatedContent.trim(), sampleXml.trim());
+  });
 
-  1) Document Processing Functions
-       processTagValue should return an empty string for unrecognized input:
-     AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
-+ actual - expected
+  it('processDocument should process the document and produce a new file', async () => {
+    createTestDocx('template.docx');
+  
+    const newFileName = await processDocument(jsonContent);
 
-+ {
-+   someKey: 'someValue'
-+ }
-- ''
-      at Context.<anonymous> (posttest.js:51:12)
-      at process.processImmediate (node:internal/timers:478:21)
+    const content = readZipFile(newFileName, 'word/document.xml');
+    const expectedContent = replacePlaceholder(sampleXml, jsonContent);
 
-  2) Document Processing Functions
-       readZipFile should read the correct file content from the zip:
-     Error: File test/document.xml not found in test.zip
-      at readZipFile (PostData.js:191:11)
-      at Context.<anonymous> (posttest.js:60:21)
-      at process.processImmediate (node:internal/timers:478:21)
+    assert.strictEqual(content.trim(), expectedContent.trim());
 
-  3) Document Processing Functions
-       writeZipFile should write the correct file content to the zip:
-     Error: File test/document.xml not found in test.zip
-      at readZipFile (PostData.js:191:11)
-      at Context.<anonymous> (posttest.js:75:21)
-      at process.processImmediate (node:internal/timers:478:21)
+    // Cleanup
+    fs.unlinkSync('template.docx');
+    fs.unlinkSync(newFileName);
+  });
 
-  4) Document Processing Functions
-       processDocument should process the document and produce a new file:
-     Error: File word/document.xml not found in ./updated_0a2b7a00-4ee5-4e03-9e74-5ef0a64c661b.docx
-      at readZipFile (PostData.js:191:11)
-      at processDocument (PostData.js:270:27)
-      at Context.<anonymous> (posttest.js:124:31)
-      at process.processImmediate (node:internal/timers:478:21)
+  it('processDocument should handle missing template file gracefully', async () => {
+    try {
+      await processDocument(jsonContent);
+      assert.fail('Expected error was not thrown');
+    } catch (error) {
+      assert.strictEqual(error.code, 'ENOENT');
+    }
+  });
 
-  5) Document Processing Functions
-       processDocument should handle missing template file gracefully:
-     AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
-+ actual - expected
+});
+```
 
-+ undefined
-- 'ENOENT'
-      at Context.<anonymous> (posttest.js:143:14)
+These changes should address the issues with your tests, ensuring that each function behaves as expected and handles edge cases correctly. Run your tests again to verify that everything works as intended.
