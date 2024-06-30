@@ -105,8 +105,10 @@ const traverseNodes = (node, tags) => {
         const tagName = tag['$']['w:val'];
         const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
         const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
-        if (tagValue.trim() !== '') {
+        if (typeof tagValue === 'string' && tagValue.trim() !== '') {
           tags[tagName] = tagValue;
+        } else if (typeof tagValue === 'object' && tagValue.text && tagValue.text.trim() !== '') {
+          tags[tagName] = tagValue.text + (tagValue.highlighted ? ' [highlighted]' : '');
         }
       }
     });
@@ -163,7 +165,6 @@ const extractContentControlTags = async (filePath) => {
 };
 
 module.exports = { extractContentControlTags };
-
 
 -------------------------
 
