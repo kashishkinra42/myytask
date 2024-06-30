@@ -1,230 +1,894 @@
-//upload.js
+index.js
+
+import controller from './controller';
+import bodyParser from "body-parser";
+import  serviceNow from '../../../config/apiConfig';
+
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('../../../config/swagger/swaggerGIMSnow.json');
+
+export default (app) => {
+
+    app.route('/api/v1/service-now/integrations/incident/record/push')
+        .post(bodyParser.json({"type" : "*/*"}),controller.sendDataFromSNOW);
+
+    app.route('/api/v1/service-now/integrations/incident/:incidentNo/role')
+        .put(bodyParser.json({"type" : "*/*"}),controller.updateRole);
+
+    app.route('/api/v1/service-now/integrations/incident/:incidentNo/zoom')
+        .put(bodyParser.json({"type" : "*/*"}),controller.updateZoom);
+
+    app.route('/api/v1/service-now/integrations/symphony/:incidentNo/:purpose/update/:roomID')
+        .post(bodyParser.json({"type" : "*/*"}),controller.updateSymphony);
+
+    app.route('/api/v1/service-now/integrations/symphony/:incidentNo/:purpose/delete')
+        .post(bodyParser.json({"type" : "*/*"}),controller.deleteCollaboration);
+
+    app.route('/api/v1/service-now/integrations/notification/send-email')
+        .put(bodyParser.json({"type" : "*/*"}),controller.sendEmail); 
+    
+    app.route('/api/v1/service-now/integrations/incident')
+        .post(bodyParser.json({"type" : "*/*"}),controller.createIncident);
 
 
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
-const path = require('path');
-const filePath = path.join(__dirname, './newdoc.docx');
+    app.route('/api/v1/service-now/integrations/incident/:incidentNo/create-collaboration/:type')
+        .post(controller.createCollaboration);
+        
+    let options = {
+        customCss: '.swagger-ui .topbar { display: none }'
+    };
+    app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
 
-const log = (message) => {
-  console.log(`[${new Date().toISOString()}] ${message}`);
-};
-
-const readFileContent = async (filePath) => {
-  return fs.promises.readFile(filePath);
-};
-
-const extractXmlFromZip = async (data) => {
-  const zip = await JSZip.loadAsync(data);
-  return zip.file('word/document.xml').async('text');
-};
-
-const parseXml = async (xmlContent) => {
-  const parser = new xml2js.Parser();
-  return parser.parseStringPromise(xmlContent);
-};
-
-const traverseNodes = (node, tags) => {
-  if (node['w:sdt']) {
-    node['w:sdt'].forEach(sdt => {
-      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
-      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
-      if (tag && tag['$'] && tag['$']['w:val']) {
-        const tagName = tag['$']['w:val'];
-        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
-        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
-        if (tagValue.trim() !== '') {
-          tags[tagName] = tagValue;
-        }
-      }
-    });
-  }
-  Object.values(node).forEach(value => {
-    if (Array.isArray(value)) {
-      value.forEach(child => traverseNodes(child, tags));
-    }
-  });
-};
-
-const extractTagValue = (content) => {
-  let text = '';
-  function traverseContent(contentNode) {
-    if (contentNode['w:t'] && Array.isArray(contentNode['w:t'])) {
-      contentNode['w:t'].forEach(textNode => {
-        if (typeof textNode === 'string') {
-          text += textNode;
-        } else if (textNode['_']) {
-          text += textNode['_'];
-        }
-      });
-    }
-    Object.values(contentNode).forEach(value => {
-      if (Array.isArray(value)) {
-        value.forEach(child => traverseContent(child));
-      }
-    });
-  }
-  traverseContent(content);
-  return text;
-};
-
-const extractContentControlTags = async (filePath) => {
-  try {
-    const data = await readFileContent(filePath);
-    const documentXml = await extractXmlFromZip(data);
-    const xmlParsed = await parseXml(documentXml);
-
-    const tags = {};
-    const body = xmlParsed['w:document']['w:body'][0];
-    traverseNodes(body, tags);
-
-    return tags;
-  } catch (error) {
-    console.error('Error:', error);
-    throw error;
-  }
-};
-
-module.exports = { extractContentControlTags };
-----------
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
-
-async function extractContentControlTags(fpath) {
-  try {
-    const documentXml = await readDocumentXml(fpath);
-    const tags = await parseDocumentXml(documentXml);
-    saveTagsToFile(tags, 'myoutputk.json');
-  } catch (error) {
-    console.error('Error:', error);
-  }
 }
 
-async function readDocumentXml(fpath) {
-  const data = fs.readFileSync(fpath);
-  const zip = await JSZip.loadAsync(data);
-  const documentXml = await zip.file('word/document.xml').async('text');
-  return documentXml;
-}
 
-async function parseDocumentXml(documentXml) {
-  const parser = new xml2js.Parser();
-  return new Promise((resolve, reject) => {
-    parser.parseString(documentXml, (err, result) => {
-      if (err) {
-        return reject(err);
-      }
-      const tags = extractTagsFromBody(result['w:document']['w:body'][0]);
-      resolve(tags);
-    });
-  });
-}
+controller.js
 
-function extractTagsFromBody(body) {
-  const tags = {};
+import { KafkaListener } from '../../interfaces/kafka/inbound/kafkaListener';
+import { messageProcessing, producerTopic } from '../../../config/kafkaConfig';
+import { componentConfigs } from '../../../config/componentConfigs';
+import logger from '../../../config/logging';
+import { ServiceNowRestClient } from "../../../app/apiRequestHandler/serviceNowRequestHandler";
+import {RestClient} from  "../../../app/restClient/GenericRestClient";
+import { AuthenticationService } from '../../../app/service/AuthenticationService';
+import {pagerduty, serviceNow, zoom, symphony, email, gimv2} from '../../../config/apiConfig';
+import { MessageProducer } from '../../interfaces/kafka/outbound/messageProducers';
+import {MessageProcessor} from '../processor/messageProcessor';
 
-  function traverseNodes(node) {
-    if (node['w:sdt']) {
-      node['w:sdt'].forEach(sdt => {
-        const tag = sdt['w:sdtPr'][0]['w:tag'];
-        if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
-          const tagName = tag[0]['$']['w:val'];
-          const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          if (typeof tagValue === 'string' && tagValue.trim() !== '') {
-            tags[tagName] = tagValue;
-          } else if (Array.isArray(tagValue) && tagValue.length > 0) {
-            tags[tagName] = tagValue;
-          }
+const _ = require("lodash");
+const createDOMPurify = require('dompurify');
+import { JSDOM } from  'jsdom';
+import {addOutboundRequest} from "../../../app/metricUtil/collectCustomMetric";
+const nodemailer = require('nodemailer');
+
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
+
+const log = logger.GIM_SNOW;
+
+const serviceNowClient = new ServiceNowRestClient(log);
+const authService = new AuthenticationService(log);
+const messageProducer = new MessageProducer({}, logger.GIM_SNOW);
+const messageProcessor = new MessageProcessor();
+const restClient = new RestClient();
+
+const mailer = nodemailer.createTransport({
+    host: email.smtpHost || 'amx-i-qa.email.gs.com', port: email.smtpPort || 25, secure: false, ignoreTLS: true
+});
+
+let configs = componentConfigs.GIM_SNOW;
+
+if (((configs.interfaces || {}).kafka || {}).inbound !== null && (((configs.interfaces || {}).kafka || {}).inbound || []).length > 0) {
+
+    let inboundEntries = ((configs.interfaces || {}).kafka || {}).inbound || [];
+
+    const consumers = {};
+    inboundEntries.forEach(inb => {
+        const kafkaService = new KafkaListener(inb["config"], logger.GIM_SNOW);
+
+        consumers[inb["id"]] = kafkaService;
+
+        try {
+
+            let consumerSet = messageProcessing[inb["config"]];
+            consumerSet["config"] = inb["config"];
+            consumerSet["name"] = "GIM_SNOW";
+
+            //Add Outbound kafka routes to the Config for registering producers.
+            if (((configs.interfaces || {}).kafka || {}).outbound !== null && (((configs.interfaces || {}).kafka || {}).outbound || []).length > 0)
+                consumerSet["producers"] = ((configs.interfaces || {}).kafka || {}).outbound;
+
+
+            kafkaService.startConsumer(consumerSet);
+        } catch (err) {
+            log.error("Error while initializing kafka consumers. Error details: " + JSON.stringify(err));
         }
-      });
-    }
-    Object.values(node).forEach(value => {
-      if (Array.isArray(value)) {
-        value.forEach(child => traverseNodes(child));
-      }
     });
-  }
 
-  traverseNodes(body);
-  return tags;
-}
+    exports.startStopKafkaConsumer = (req, res) => {
 
-function extractTagValue(content) {
-  let text = '';
-  let listItems = [];
+        let consumer = req.query.consumer;
+        let action = req.query.action;
+        let response = consumers[consumer].startStopKafkaConsumer(consumer, action);
+        res.send(response);
+    };
 
-  function traverseContent(contentNode) {
-    if (contentNode['w:p']) {
-      contentNode['w:p'].forEach(pNode => {
-        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
-          // Detect a numbered list item
-          const listItem = extractTextFromNode(pNode);
-          if (typeof listItem === 'string' && listItem.trim() !== '') {
-            listItems.push(listItem);
-          } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
-            listItems.push(listItem);
-          }
-        } else {
-          // Regular text node
-          const pText = extractTextFromNode(pNode);
-          if (typeof pText === 'string' && pText.trim() !== '') {
-            text += pText;
-          } else if (typeof pText === 'object' && pText.text.trim() !== '') {
-            text += pText.text;
-          }
-        }
-      });
-    }
-    Object.values(contentNode).forEach(value => {
-      if (Array.isArray(value)) {
-        value.forEach(child => traverseContent(child));
-      }
-    });
-  }
-
-  function extractTextFromNode(node) {
-    let nodeText = '';
-    let highlighted = false;
-
-    if (node['w:r']) {
-      node['w:r'].forEach(rNode => {
-        if (rNode['w:rPr'] && rNode['w:rPr'][0]['w:highlight']) {
-          highlighted = true;
-        }
-        if (rNode['w:t']) {
-          rNode['w:t'].forEach(textNode => {
-            if (typeof textNode === 'string') {
-              nodeText += textNode;
-            } else if (textNode['_']) {
-              nodeText += textNode['_'];
+    exports.sendDataFromSNOW = (req, res) => {
+        let body = req.body
+            if (body === null || body === undefined) {
+                res.status(415).send({ message: "Record data cannot be empty." });
+                return;
             }
-          });
+            let ticketNo = "";
+            if (!_.isArray(body)) {
+                res.status(422).send({ message: "Invalid Message. Should be Array." });
+                return;
+            }
+            if (body[0] && body[0].ticketNo) {
+                ticketNo = body[0].ticketNo;
+            }
+
+            if (ticketNo == undefined || ticketNo.trim() == '') {
+                res.status(400).send({ message: "Invalid Message. Ticket Number missing." });
+                return;
+            }
+            // adding updateSource to mark updates coming from ServiceNow
+            body[0].updateSource = "ServiceNow"
+
+            let payload = { topic: producerTopic.snowGim, message: { key: ticketNo, value: JSON.stringify(body) } };
+            const configSet = { config: "SNOW_GIM", name: "SNOW_GIM_OUT" }
+
+            log.info("Routing the ticket " + ticketNo + " with payload " + JSON.stringify(payload) +  " to following Topic(s) - " + JSON.stringify(producerTopic.snowGim));
+            messageProducer.produceMessage(payload, {}, configSet)
+                .then(offset => res.status(201).send({ ticketNo: ticketNo, message: `Published to Kafka. Offset: ${offset}`, success: true }))
+                .catch(e => {
+                    logger.error('Publish failed for ' + ticketNo + '. Error details: ' + JSON.stringify(e));
+                    res.status(500).send({ ticketNo: ticketNo, message: 'Publish failed.', success: false, error: e });
+                });
+    };
+
+    exports.getConsumerIds = (req, res) => {
+        res.status(200).send({ consumers: Object.keys(consumers) });
+    }
+
+    process.on('SIGINT', function () {
+        logger.info("Kill Signal received. Gracefully shutting down application.");
+
+        try {
+            consumers["GIM_SNOW_IN"].startStopKafkaConsumer("GIM_SNOW_IN", "PAUSE");
+        } catch (e) {
+
         }
-      });
-    }
+        try {
+            consumers["GIM_SNOW_OUT"].startStopKafkaConsumer("GIM_SNOW_OUT", "PAUSE");
+        } catch (e) {
 
-    if (highlighted) {
-      return { text: nodeText, highlighted: true };
-    }
-    return nodeText;
-  }
-
-  traverseContent(content);
-
-  if (listItems.length > 0) {
-    // Return list items as an array of strings or objects
-    return listItems;
-  } else {
-    return text;
-  }
+        }
+        process.exit(0);
+    });
 }
 
-function saveTagsToFile(tags, outputPath) {
-  const jsonFile = JSON.stringify(tags, null, 2);
-  fs.writeFileSync(outputPath, jsonFile);
+exports.getPing = (req, res) => {
+    res.send("OK")
+};
+
+exports.sendEmail = async (req, res) => {
+    let emailSysId = req.query.sysId;
+    if ((emailSysId || "").trim().length == 0) {
+        res.status(400).send("Sys Id is mandatory");
+        return;
+    }
+    //options.url, options.method,
+    serviceNowClient.executeRequest({
+        url: serviceNow.host + "/api/now/table/x_gsg_eng_int_email?sysparm_query=" + encodeURIComponent('state=Pending^sys_id=' + emailSysId),
+        method: 'GET',
+        headers:
+            { 'content-type': 'application/json' },
+        metricsOverride: {
+            url: '/api/now/table/x_gsg_eng_int_email'
+        }
+    }).then(r=>{
+        if (r.status == 200) {
+            let emailResult = JSON.parse(r.data.data).result;
+            log.info('Email Result: ' + JSON.stringify(emailResult));
+            if(emailResult && emailResult.length == 1) {
+                sanitizeAndSendEmail(emailResult[0],emailSysId, res);
+            } else {
+              log.info('No record found for emailSysid : ' + emailSysId);
+              res.status(404).send('No email record matching for ' + emailSysId);
+            }
+        } else {
+            logger.error("Error while getting email details for " + emailSysId+ ". Error details: " + JSON.stringify(r.data));
+            res.status(500).send(r.data);
+        }
+    });
 }
 
-const fpath = './Test Document.docx';
-extractContentControlTags(fpath);
+function sanitizeAndSendEmail(emailData, emailSysId, res) {
+    let start = process.hrtime();
+
+    let mail = {
+        from: ((emailData.from) || "").trim().length > 0? emailData.from: email.from,
+        to: (emailData.recipients || "").trim().split(';').filter(e=>e.trim()!=''),
+        cc: (emailData.copied || "").trim().split(';').filter(e=>e.trim()!=''),
+        bcc: (emailData.blind_copied || "").trim().split(';').filter(e=>e.trim()!=''),
+        subject: emailData.subject,
+        html: DOMPurify.sanitize(emailData.body,
+            {ADD_ATTR:['content','http-equiv'], ADD_TAGS: ['meta'], ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|da|sip|symphony):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+            USE_PROFILES:{html:true, svg:true, svgFilters: true}}),
+        headers: (emailData.headers|| "").trim().split('\n').filter(h=>h.trim() !='').map(h=>{ return {key: h.split(':')[0], value: h.split(':')[1]}}),
+        messageId: (emailData.message_id || "").trim().length > 0 ? emailData.message_id : undefined,
+        replyTo: (emailData.reply_to || "").trim().length > 0 ?  emailData.reply_to : undefined,
+    }
+
+    mailer.sendMail(mail).then(r=>{
+        log.info('Mail sent for ' + emailSysId);
+        // log.info('SMPT Response ' + emailSysId);
+        res.status(200).send(r);
+
+        let end = process.hrtime(start);
+        const timeInMs = (end[0]* 1000000000 + end[1]) / 1000000; // convert first to ns then to ms
+
+        addOutboundRequest({
+            host: email.smtpHost,
+            url: "GIM_SEND_EMAIL",
+            method: "MAIL",
+            duration: timeInMs,
+            protocol: "SMTP",
+            status: 200
+        });
+    })
+    .catch(e=>{
+        log.error('Not able to send mail. Error Details: ' + JSON.stringify(e));
+        res.status(500).send(e);
+
+        let end = process.hrtime(start);
+        const timeInMs = (end[0]* 1000000000 + end[1]) / 1000000; // convert first to ns then to ms
+
+        addOutboundRequest({
+            host: email.smtpHost,
+            url: "GIM_SEND_EMAIL",
+            method: "MAIL",
+            duration: timeInMs,
+            protocol: "SMTP",
+            status: 500
+        });
+    });
+}
+
+exports.pushRecordSNOW = function (req, res) {
+
+    let requestFrom = authService.getKerberosFromRequest(req);
+    if (pagerduty.accounts.indexOf(requestFrom) < 0) {
+        res.status(401).send("Unauthorized user");
+        return;
+    }
+    log.info("Incoming request from " + requestFrom)
+
+    let dataset= ""
+    if(req.query.dataset && (req.query.dataset==="user" || req.query.dataset==="services" || req.query.dataset==="virtualServices" || req.query.dataset==="teams" || req.query.dataset==="teamGlobal" || req.query.dataset==="escalationPolicy"))
+        dataset = req.query.dataset
+    else {
+        res.status(400).send({ message: "Invalid dataset Parameter" });
+        return;
+    }
+
+    log.info("Sending data for " + dataset + " to Service-Now")
+    serviceNowClient.sendDataToServiceNow(dataset, JSON.stringify(req.body), {method: "POST", headers: {"Content-type": "application/json"}, json: true}, null, "json").then((result) => {
+        res.status(200).send({message: "Success. Data will be sent"});
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " +JSON.stringify(error));
+        });
+}
+
+exports.updateRole = function(req, res){
+
+    let incidentNo= ""
+    if(req.params.incidentNo)
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameter"});
+        return;
+    }
+
+    log.info("Updating role for " + incidentNo)
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/" + incidentNo +"/role",
+        "method":  "PATCH",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + "/*" +"/role"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });
+}
+
+exports.updateZoom = function(req, res){
+
+    let incidentNo= ""
+    if(req.params.incidentNo)
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameter"});
+        return;
+    }
+
+    log.info("Updating zoom room for " + incidentNo)
+
+    let details = {
+        "id": req.body.key,
+        "join_url": zoom + req.body.key, 
+        "passcode": req.body.value,
+        "type": "zoom",
+        "topic": incidentNo
+    }
+    let meetingDetails = []
+    meetingDetails.push(details)
+    let payload = { "meetingDetails" : meetingDetails}
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/" + incidentNo + "/collaboration",
+        "method":  "POST",
+        "body": JSON.stringify(payload),
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + "/*" +"/collaboration"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });
+}
+
+exports.updateSymphony = function(req, res){
+
+    let incidentNo, purpose, roomID= ""
+    if(req.params.incidentNo && req.params.purpose && req.params.roomID ){
+        incidentNo = req.params.incidentNo
+        purpose = req.params.purpose
+        roomID = req.params.roomID
+    }
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Updating symphony room for " + incidentNo)
+
+    let details = {
+        "id": roomID,
+        "join_url": symphony + roomID + "&streamType=chatroom",
+        "type": (purpose==="Response Team Room")? "symphony": "symphonycomm",
+        "topic": incidentNo
+    }    
+    let meetingDetails = []
+    meetingDetails.push(details)
+    let payload = { "meetingDetails" : meetingDetails }
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/" + incidentNo + "/collaboration",
+        "method":  "POST",
+        "body": JSON.stringify(payload),
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + "/*" +"/collaboration"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });
+}
+
+exports.deleteCollaboration = function(req, res){
+
+    let incidentNo, purpose=  ""
+    if(req.params.incidentNo && req.params.purpose ){
+        incidentNo = req.params.incidentNo
+        purpose = req.params.purpose
+    }
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Deleting symphony room for " + incidentNo)
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/" + incidentNo + "/collaboration?meeting_type=" + purpose,
+        "method":  "DELETE",
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + "/*" + "/collaboration?meeting_type=" + purpose}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });
+}
+
+exports.sendCioNotables = function(req, res){
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({message: "Record data cannot be empty."});
+        return;
+    }
+
+    log.info("Transforming data for cio-notables")
+
+    let user = authService.getKerberosFromRequest(req);
+
+    messageProcessor.sendRecordToServiceNow(req.body, user).then(result => {
+        let data = req.body
+        let responseBody = "";
+        try {
+            responseBody = JSON.parse(result.data) || "";
+            res.contentType("application/json").status(result.status).send(transformResponse(responseBody, data));
+        }catch(er){
+            log.info("Unable to parse response -" + JSON.stringify(result));
+            res.contentType("application/json").status(result.status).send(result.data||{error: "Error Occurred"});
+        }
+
+        log.info("Send to Service-Now successful. Response - " + result.data);
+    }, error => {
+        res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+        log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+    }).catch(error => {
+        res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+        log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+    });
+
+}
+
+exports.getIncident = function(req, res){
+
+    let incidentNo
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Fetching incident details for " + incidentNo)
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/" + incidentNo,
+        "method":  "GET",
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + "/*"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        let resultIncident = JSON.parse(result.data.data)
+        res.status(result.status).send(resultIncident.result[0]);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+        });
+}
+
+exports.sendFacilitiesData = function(req, res){
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({message: "Record data cannot be empty."});
+        return;
+    }
+
+    var data = req.body
+    data["sourceSystem"] = {
+        "value" : "CFS"
+    }
+    log.info("Sending data for CFS - "+ JSON.stringify(data))
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.path,
+        "method":  "POST",
+        "body": JSON.stringify(data),
+        "headers": {"Content-type": "application/json"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        log.info("Response while sending CFS data to SNOW - " + JSON.stringify(result) )
+        res.status(result.status).send(JSON.parse(result.data.data).result);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+        });
+
+}
+
+exports.isOpen = function(req, res){
+
+    let incidentNo
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Fetching is-open details for " + incidentNo)
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + serviceNow.isOpen + incidentNo,
+        "method":  "GET",
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + serviceNow.isOpen+ "*"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+        });
+}
+
+exports.sendToEbonding = function(req, res){
+
+    let incidentNo
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else {
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Sending to ebonding - " + incidentNo)
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + serviceNow.sendToEbonding + incidentNo,
+        "method":  "PUT",
+        "headers": {"Content-type": "application/json"},
+        "body": ""
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+    }, error => {
+        res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+        log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+    }).catch(error => {
+        res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+        log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+    });
+}
+
+exports.createCollaboration = function(req, res){
+
+    let incidentNo
+    let type
+
+    if(req.params.incidentNo)
+        incidentNo = req.params.incidentNo
+    else {
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    if(req.params.type )
+        type = req.params.type
+    else {
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Sending to ebonding - " + incidentNo)
+
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/" + incidentNo + serviceNow.createCollaboration + type,
+        "method":  "POST",
+        "headers": {"Content-type": "application/json"},
+        "body": "",
+        "metricsOverride":{"url": serviceNow.incident + "/*" + serviceNow.createCollaboration + type}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+    }, error => {
+        res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+        log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+    }).catch(error => {
+        res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+        log.error("Error occurred while trying to send request to Service-Now. Error details: " + JSON.stringify(error));
+    });
+}
+
+exports.createIncident = function (req, res) {
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({ message: "Record data cannot be empty." });
+        return;
+    }
+
+    // log.info("Creating incident")
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident,
+        "method":  "POST",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });  
+}
+
+exports.updateIncident = function (req, res) {
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({ message: "Record data cannot be empty." });
+        return;
+    }
+
+    let incidentNo
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Updating incident for " + incidentNo)
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/" + incidentNo,
+        "method":  "PUT",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + "/*"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });
+}
+
+exports.updateOpriskId = function (req, res) {
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({ message: "Record data cannot be empty." });
+        return;
+    }
+
+    let incidentNo
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Updating oprisk id for " + incidentNo)
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + "/oprisk/" + incidentNo,
+        "method":  "PUT",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + "/*"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+    }, error => {
+        res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+        log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+    }).catch(error => {
+        res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+        log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+    });
+}
+exports.syncGimIncident = function (req, res) {
+
+    let incidentNo;
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+    log.info("Fetching GIMv2 incident for " + incidentNo);
+    //Make Call to GIMv2 get incident api and send the json to IMS create/update GIMv2 API
+    restClient.executeRequest(gimv2.host, gimv2.port, gimv2.apiPath + incidentNo ).then((result) =>{
+        let payload = result.data;
+        if(payload != null){
+            log.info("Sending update request to Service Now with JSOn" + JSON.stringify(payload));
+            let options =  {
+                "url": serviceNow.host + serviceNow.incident + "/gimv2",
+                "method":  "POST",
+                "body": payload,
+                "headers": {"Content-type": "application/json"}
+            };
+            serviceNowClient.executeRequest(options).then((result) => {
+                res.status(result.status).send(result.data);
+            }, error => {
+                res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+                log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+            }).catch(error => {
+                res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+                log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+            });
+        }
+
+
+    }, error=> {
+        logger.error("Unable to fetch GIMv2 incident" + incidentNo);
+        logger.error(err);
+        res.status(error.status || 500).send(error);
+    }).catch((err) => {
+        logger.error("Unable to fetch GIMv2 incident" + incidentNo);
+        logger.error(err);
+        res.status(error.status || 500).send("");
+    });
+}
+
+exports.mitigateIncident = function (req, res) {
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({ message: "Record data cannot be empty." });
+        return;
+    }
+
+    let incidentNo
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Mitigating incident for " + incidentNo)
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + serviceNow.mitigate + incidentNo,
+        "method":  "PUT",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + serviceNow.mitigate + "*"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });  
+}
+
+exports.resolveIncident = function (req, res) {
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({ message: "Record data cannot be empty." });
+        return;
+    }
+
+    let incidentNo
+    if(req.params.incidentNo )
+        incidentNo = req.params.incidentNo
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Resolving incident for " + incidentNo)
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + serviceNow.resolve + incidentNo,
+        "method":  "PUT",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"},
+        "metricsOverride" : { "url" : serviceNow.incident + serviceNow.resolve + "*"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });  
+}
+
+exports.addTag = function (req, res) {
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({ message: "Record data cannot be empty." });
+        return;
+    }
+
+    // log.info("Adding tag for incident")
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + serviceNow.tag,
+        "method":  "PUT",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });  
+}
+
+exports.incidentQuery = function (req, res) {
+    let query
+    if(req.query.query )
+    query = req.query.query
+    else{
+        res.status(400).send({message: "Invalid Parameters"});
+        return;
+    }
+
+    log.info("Incident querying for "+ query)
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + serviceNow.query + "?query=" +query,
+        "method":  "GET",
+        "headers": {"Content-type": "application/json"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });  
+}
+
+exports.associateIncident = function (req, res) {
+    if (req.body === null || req.body === undefined) {
+        res.status(415).send({ message: "Record data cannot be empty." });
+        return;
+    }
+
+    // log.info("Creating incident")
+    let options =  {
+        "url": serviceNow.host + serviceNow.incident + serviceNow.associate,
+        "method":  "POST",
+        "body": JSON.stringify(req.body),
+        "headers": {"Content-type": "application/json"}
+    };
+    serviceNowClient.executeRequest(options).then((result) => {
+        res.status(result.status).send(result.data);
+        }, error => {
+            res.contentType("application/json").status(error.status || 500).send({message: "Unknown error occurred.", details: error});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        }).catch(error => {
+            res.contentType("application/json").status(500).send({message: "Unknown error occurred."});
+            log.error("Error occurred while trying to send record to Service-Now. Error details: " + JSON.stringify(error));
+        });  
+}
