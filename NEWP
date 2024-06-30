@@ -7,14 +7,38 @@ const filePath = path.join(__dirname, './newdoc.docx');
 
 const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
 
-const readFileContent = (filePath) => fs.promises.readFile(filePath);
-
-const extractXmlFromZip = async (data) => {
-  const zip = await JSZip.loadAsync(data);
-  return zip.file('word/document.xml').async('text');
+const readFileContent = async (filePath) => {
+  try {
+    return await fs.promises.readFile(filePath);
+  } catch (error) {
+    log(`Error reading file: ${error}`);
+    throw error;
+  }
 };
 
-const parseXml = (xmlContent) => new xml2js.Parser().parseStringPromise(xmlContent);
+const extractXmlFromZip = async (data) => {
+  try {
+    const zip = await JSZip.loadAsync(data);
+    const file = zip.file('word/document.xml');
+    if (!file) {
+      throw new Error('document.xml not found in zip');
+    }
+    return file.async('text');
+  } catch (error) {
+    log(`Error extracting XML from ZIP: ${error}`);
+    throw error;
+  }
+};
+
+const parseXml = async (xmlContent) => {
+  try {
+    const parser = new xml2js.Parser();
+    return await parser.parseStringPromise(xmlContent);
+  } catch (error) {
+    log(`Error parsing XML: ${error}`);
+    throw error;
+  }
+};
 
 const extractTagValue = (content) => {
   let text = '';
@@ -61,10 +85,15 @@ const extractTagsFromBody = (body) => {
   const traverseNodes = (node) => {
     if (node['w:sdt']) {
       node['w:sdt'].forEach(sdt => {
-        const tag = sdt['w:sdtPr'][0]['w:tag'][0]['$']['w:val'];
-        if (tag) {
-          const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          if (tagValue.trim()) tags[tag] = tagValue;
+        const sdtPr = sdt['w:sdtPr'] && sdt['w:sdtPr'][0];
+        const tag = sdtPr && sdtPr['w:tag'] && sdtPr['w:tag'][0];
+        if (tag && tag['$'] && tag['$']['w:val']) {
+          const tagName = tag['$']['w:val'];
+          const sdtContent = sdt['w:sdtContent'] && sdt['w:sdtContent'][0];
+          const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
+          if (tagValue.trim()) {
+            tags[tagName] = tagValue;
+          }
         }
       });
     }
@@ -79,17 +108,28 @@ const extractTagsFromBody = (body) => {
 
 const extractContentControlTags = async (filePath) => {
   try {
+    log(`Reading file: ${filePath}`);
     const data = await readFileContent(filePath);
+
+    log('Extracting XML from ZIP');
     const documentXml = await extractXmlFromZip(data);
+
+    log('Parsing XML content');
     const xmlParsed = await parseXml(documentXml);
-    return extractTagsFromBody(xmlParsed['w:document']['w:body'][0]);
+
+    log('Extracting tags from XML');
+    const tags = extractTagsFromBody(xmlParsed['w:document']['w:body'][0]);
+
+    log('Tags extraction completed');
+    return tags;
   } catch (error) {
-    console.error('Error:', error);
+    log(`Error: ${error}`);
     throw error;
   }
 };
 
 module.exports = { extractContentControlTags };
+
 
 -------------------------
 
