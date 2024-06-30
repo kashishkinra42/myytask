@@ -1,106 +1,135 @@
-upload.js 
+upload.js
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
 const path = require('path');
-const filePath = path.join(__dirname, './newdoc.docx');
 
-const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
+// const log = (message) => {
+//   console.log(`[${new Date().toISOString()}] ${message}`);
+// };
 
 const readFileContent = async (filePath) => {
-  try {
-    return await fs.promises.readFile(filePath);
-  } catch (error) {
-    log(`Error reading file: ${error}`);
-    throw error;
-  }
+  return fs.promises.readFile(filePath);
 };
 
 const extractXmlFromZip = async (data) => {
-  try {
-    const zip = await JSZip.loadAsync(data);
-    const file = zip.file('word/document.xml');
-    if (!file) {
-      throw new Error('document.xml not found in zip');
-    }
-    return file.async('text');
-  } catch (error) {
-    log(`Error extracting XML from ZIP: ${error}`);
-    throw error;
-  }
+  const zip = await JSZip.loadAsync(data);
+  return zip.file('word/document.xml').async('text');
 };
 
 const parseXml = async (xmlContent) => {
-  try {
-    const parser = new xml2js.Parser();
-    return await parser.parseStringPromise(xmlContent);
-  } catch (error) {
-    log(`Error parsing XML: ${error}`);
-    throw error;
+  const parser = new xml2js.Parser();
+  return parser.parseStringPromise(xmlContent);
+};
+
+const traverseNodes = (node, tags) => {
+  if (node['w:sdt']) {
+    node['w:sdt'].forEach(sdt => {
+      const sdtPr = sdt['w:sdtPr'] && Array.isArray(sdt['w:sdtPr']) ? sdt['w:sdtPr'][0] : null;
+      const tag = sdtPr && sdtPr['w:tag'] && Array.isArray(sdtPr['w:tag']) ? sdtPr['w:tag'][0] : null;
+      if (tag && tag['$'] && tag['$']['w:val']) {
+        const tagName = tag['$']['w:val'];
+        const sdtContent = sdt['w:sdtContent'] && Array.isArray(sdt['w:sdtContent']) ? sdt['w:sdtContent'][0] : null;
+        const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
+        if (tagValue.trim() !== '') {
+          tags[tagName] = tagValue;
+        }
+      }
+    });
   }
+  Object.values(node).forEach(value => {
+    if (Array.isArray(value)) {
+      value.forEach(child => traverseNodes(child, tags));
+    }
+  });
 };
 
 const extractTagValue = (content) => {
   let text = '';
-  const listItems = [];
+  let listItems = [];
 
-  const extractTextFromNode = (node) => {
+  function traverseContent(contentNode) {
+    if (contentNode['w:p']) {
+      contentNode['w:p'].forEach(pNode => {
+        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
+          // Detect a numbered list item
+          const listItem = extractTextFromNode(pNode);
+          if (typeof listItem === 'string' && listItem.trim() !== '') {
+            listItems.push(listItem);
+          } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
+            listItems.push(listItem);
+          }
+        } else {
+          // Regular text node
+          const pText = extractTextFromNode(pNode);
+          if (typeof pText === 'string' && pText.trim() !== '') {
+            text += pText;
+          } else if (typeof pText === 'object' && pText.text.trim() !== '') {
+            text += pText.text;
+          }
+        }
+      });
+    }
+    Object.values(contentNode).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseContent(child));
+      }
+    });
+  }
+
+  function extractTextFromNode(node) {
     let nodeText = '';
+    let highlighted = false;
+
     if (node['w:r']) {
       node['w:r'].forEach(rNode => {
         if (rNode['w:t']) {
           rNode['w:t'].forEach(textNode => {
-            nodeText += typeof textNode === 'string' ? textNode : textNode['_'];
+            if (typeof textNode === 'string') {
+              nodeText += textNode;
+            } else if (textNode['_']) {
+              nodeText += textNode['_'];
+            }
           });
         }
       });
     }
     return nodeText;
-  };
-
-  const traverseContent = (contentNode) => {
-    if (contentNode['w:p']) {
-      contentNode['w:p'].forEach(pNode => {
-        const pText = extractTextFromNode(pNode);
-        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
-          if (pText.trim()) listItems.push(pText);
-        } else {
-          text += pText;
-        }
-      });
-    }
-    Object.values(contentNode).forEach(value => {
-      if (Array.isArray(value)) value.forEach(child => traverseContent(child));
-    });
-  };
+  }
 
   traverseContent(content);
 
-  return listItems.length > 0 ? listItems : text;
+  if (listItems.length > 0) {
+    return listItems;
+  } else {
+    return text;
+  }
 };
 
 const extractTagsFromBody = (body) => {
   const tags = {};
 
-  const traverseNodes = (node) => {
+  function traverseNodes(node) {
     if (node['w:sdt']) {
       node['w:sdt'].forEach(sdt => {
-        const sdtPr = sdt['w:sdtPr'] && sdt['w:sdtPr'][0];
-        const tag = sdtPr && sdtPr['w:tag'] && sdtPr['w:tag'][0];
-        if (tag && tag['$'] && tag['$']['w:val']) {
-          const tagName = tag['$']['w:val'];
-          const sdtContent = sdt['w:sdtContent'] && sdt['w:sdtContent'][0];
-          const tagValue = sdtContent ? extractTagValue(sdtContent) : '';
-          if (tagValue.trim()) {
+        const tag = sdt['w:sdtPr'][0]['w:tag'];
+        if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
+          const tagName = tag[0]['$']['w:val'];
+          const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
+          if (typeof tagValue === 'string' && tagValue.trim() !== '') {
+            tags[tagName] = tagValue;
+          } else if (Array.isArray(tagValue) && tagValue.length > 0) {
             tags[tagName] = tagValue;
           }
         }
       });
     }
     Object.values(node).forEach(value => {
-      if (Array.isArray(value)) value.forEach(child => traverseNodes(child));
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseNodes(child));
+      }
     });
-  };
+  }
 
   traverseNodes(body);
   return tags;
@@ -108,30 +137,120 @@ const extractTagsFromBody = (body) => {
 
 const extractContentControlTags = async (filePath) => {
   try {
-    log(`Reading file: ${filePath}`);
     const data = await readFileContent(filePath);
-
-    log('Extracting XML from ZIP');
     const documentXml = await extractXmlFromZip(data);
-
-    log('Parsing XML content');
     const xmlParsed = await parseXml(documentXml);
 
-    log('Extracting tags from XML');
     const tags = extractTagsFromBody(xmlParsed['w:document']['w:body'][0]);
 
-    log('Tags extraction completed');
     return tags;
   } catch (error) {
-    log(`Error: ${error}`);
+    console.error('Error:', error);
     throw error;
   }
 };
 
 module.exports = { extractContentControlTags };
 
+postdata.js
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
 
--------------------------
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
+
+const readZipFile = (zipFilePath, fileName) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(fileName);
+  const content = zipEntry.getData().toString('utf8');
+  return content;
+};
+
+const writeZipFile = (zipFilePath, fileName, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
+
+const processTagValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => {
+      if (typeof item === 'string') {
+        return `${index + 1}. ${item}`;
+      } else if (typeof item === 'object' && item.text) {
+        return `${index + 1}. ${item.text}`;
+      }
+      return '';
+    }).join('\n');
+  } else if (typeof value === 'object' && value.text) {
+    return value.text;
+  }
+  return value;
+};
+
+const replacePlaceholder = (documentContent, jsonContent) => {
+  log(`Entering replacePlaceholder`);
+  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
+
+  select("//w:sdt", doc).forEach(node => {
+    const tagNode = select('.//w:tag/@w:val', node)[0];
+    if (tagNode) {
+      const tagName = tagNode.value;
+      log(`Processing tag: ${tagName}`);
+      if (jsonContent.hasOwnProperty(tagName)) {
+        const textNodes = select('.//w:t', node);
+        if (textNodes.length > 0) {
+          const processedValue = processTagValue(jsonContent[tagName]);
+          const parts = processedValue.split('\n');
+
+          // Clear existing text nodes
+          textNodes.forEach((textNode, index) => {
+            if (index === 0) {
+              textNode.textContent = parts[0];
+            } else {
+              textNode.parentNode.removeChild(textNode);
+            }
+          });
+
+          // Add new text nodes and line breaks
+          for (let i = 1; i < parts.length; i++) {
+            const breakNode = doc.createElement('w:br');
+            const newTextNode = doc.createElement('w:t');
+            newTextNode.textContent = parts[i];
+            textNodes[0].parentNode.appendChild(breakNode);
+            textNodes[0].parentNode.appendChild(newTextNode);
+          }
+        }
+      }
+    }
+  });
+
+  const serializer = new XMLSerializer();
+  const updatedContent = serializer.serializeToString(doc);
+  log(`Exiting replacePlaceholder`);
+  return updatedContent;
+};
+
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './Test Document.docx';
+  const fileName = 'word/document.xml';
+
+  const newFileName = `./updated_${uuidv4()}.docx`;
+  fs.copyFileSync(templateFilePath, newFileName);
+
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
+
+  return newFileName;
+};
+
+module.exports = { processDocument };
 
 
 app.js
@@ -150,6 +269,37 @@ app.use(express.json());
 const log = (message) => {
   console.log(`[${new Date().toISOString()}] ${message}`);
 };
+
+app.post('/update-document', async (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const jsonContent = req.body;
+
+  try {
+    const updatedFilePath = await processDocument(jsonContent);
+
+    res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    const fileStream = fs.createReadStream(updatedFilePath);
+
+    fileStream.pipe(res).on('finish', () => {
+      fs.unlink(updatedFilePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting file:', unlinkErr);
+        }
+      });
+    });
+
+    fileStream.on('error', (err) => {
+      console.error('Error reading file:', err);
+      res.status(500).send('Error reading file');
+    });
+
+  } catch (error) {
+    console.error('Error processing document:', error);
+    res.status(500).send('Error processing document');
+  }
+});
 
 app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
   if (!req.file) {
