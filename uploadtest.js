@@ -230,10 +230,16 @@ describe('Document Processing Functions', () => {
 
     it('should handle empty XML content', async () => {
       sinon.restore(); // Restore all stubs
+      readFileStub = sinon.stub(fs.promises, 'readFile').resolves(mockDocxFile);
       jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
         file: sinon.stub().returns({
           async: sinon.stub().resolves(emptyXmlContent),
         }),
+      });
+      parseStringPromiseStub = sinon.stub().resolves({
+        'w:document': {
+          'w:body': [{}],
+        },
       });
 
       const functions = proxyquire('./upload.js', {
@@ -252,6 +258,12 @@ describe('Document Processing Functions', () => {
 
     it('should handle invalid XML content', async () => {
       sinon.restore(); // Restore all stubs
+      readFileStub = sinon.stub(fs.promises, 'readFile').resolves(mockDocxFile);
+      jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
+        file: sinon.stub().returns({
+          async: sinon.stub().resolves(invalidXmlContent),
+        }),
+      });
       parseStringPromiseStub = sinon.stub().rejects(new Error('Invalid XML'));
 
       const functions = proxyquire('./upload.js', {
