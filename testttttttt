@@ -1,48 +1,79 @@
-  Document Processing Functions
-    √ should read the content of an existing file in a zip archive (50ms)
-    √ should throw an error if the file does not exist in the zip archive (46ms)
-    √ should update the content of a file in a zip archive (74ms)
-    √ should process simple text values correctly
-    √ should process text object values correctly
-    √ should process array of items correctly
-    √ should process array of objects correctly
-    √ should replace placeholders in the document content
-[xmldom error]  invalid doc source
-@#[line:0,col:undefined]
-    1) should handle empty input gracefully
-[xmldom error]  invalid doc source
-@#[line:0,col:undefined]
-    2) should handle undefined input without errors
-    √ should handle non-existent tags in the document
+The errors you're encountering (`invalid doc source` and `Context node not found when determining document root`) typically indicate issues with the XML document structure or how it's handled within the `replacePlaceholder` function. These errors occur when the XML parsing library (`@xmldom/xmldom` in this case) encounters malformed or empty XML content.
 
+To resolve these issues, let's ensure the `replacePlaceholder` function handles empty or undefined inputs gracefully. Here's a revised approach to handle these cases more robustly:
 
-  9 passing (199ms)
-  2 failing
+1. **Handle Empty Input Gracefully**: If the input XML document (`doc`) is empty or falsy, return an empty string immediately.
 
-  1) Document Processing Functions
-       should handle empty input gracefully:
-     Error: Context node not found when determining document root.
-      at PathExpr.getRoot (node_modules\xpath\xpath.js:1872:19)
-      at PathExpr.applyLocationPath (node_modules\xpath\xpath.js:2196:60)
-      at PathExpr.evaluate (node_modules\xpath\xpath.js:2211:30)
-      at XPath.evaluate (node_modules\xpath\xpath.js:1375:32)
-      at XPathExpression.evaluate (node_modules\xpath\xpath.js:4536:33)
-      at exports.selectWithResolver (node_modules\xpath\xpath.js:4989:33)
-      at Z:\Desktop\work-addin\node_modules\xpath\xpath.js:4981:28
-      at replacePlaceholder (PostData.js:242:24)
-      at Context.<anonymous> (posttest.js:227:28)
-      at process.processImmediate (node:internal/timers:478:21)
+2. **Handle Undefined Input Gracefully**: If either `doc` or `jsonContent` is undefined, return an empty string as well.
 
-  2) Document Processing Functions
-       should handle undefined input without errors:
-     Error: Context node not found when determining document root.
-      at PathExpr.getRoot (node_modules\xpath\xpath.js:1872:19)
-      at PathExpr.applyLocationPath (node_modules\xpath\xpath.js:2196:60)
-      at PathExpr.evaluate (node_modules\xpath\xpath.js:2211:30)
-      at XPath.evaluate (node_modules\xpath\xpath.js:1375:32)
-      at XPathExpression.evaluate (node_modules\xpath\xpath.js:4536:33)
-      at exports.selectWithResolver (node_modules\xpath\xpath.js:4989:33)
-      at Z:\Desktop\work-addin\node_modules\xpath\xpath.js:4981:28
-      at replacePlaceholder (PostData.js:242:24)
-      at Context.<anonymous> (posttest.js:237:28)
-      at process.processImmediate (node:internal/timers:478:21)
+Let's update the `replacePlaceholder` function accordingly in your `PostData.js` module:
+
+```javascript
+// PostData.js
+
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
+
+function replacePlaceholder(doc, jsonContent) {
+  if (!doc || !jsonContent) {
+    return ''; // Return empty string for undefined inputs
+  }
+
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(doc, 'application/xml');
+  const select = xpath.useNamespaces({"w":"http://schemas.openxmlformats.org/wordprocessingml/2006/main"});
+  
+  Object.keys(jsonContent).forEach(tag => {
+    const nodes = select(`//*[local-name()='tag' and @w:val='${tag}']`, xmlDoc);
+    nodes.forEach(node => {
+      const textNode = node.parentNode.nextSibling.firstChild;
+      if (textNode.nodeName === 'w:t') {
+        textNode.textContent = jsonContent[tag];
+      }
+    });
+  });
+
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(xmlDoc);
+}
+
+module.exports = {
+  replacePlaceholder
+};
+```
+
+### Explanation of Changes:
+- **Early Return for Empty or Undefined Inputs**: Added checks at the beginning of `replacePlaceholder` to return an empty string (`''`) if `doc` or `jsonContent` is falsy or undefined. This prevents the XML parsing library from attempting to process invalid input.
+
+### Adjusted Test Cases:
+Now, update the test cases in `posttest.js` to align with the revised function:
+
+```javascript
+const { replacePlaceholder } = require('./PostData'); // Adjust path as necessary
+
+describe('Document Processing Functions', function() {
+  
+  // Existing test cases remain unchanged
+  
+  it('should handle empty input gracefully', function() {
+    const updatedContent = replacePlaceholder('', {});
+    assert.strictEqual(updatedContent, '');
+  
+    const emptyJson = {};
+    const emptyDoc = '<w:document></w:document>';
+    const updatedEmpty = replacePlaceholder(emptyDoc, emptyJson);
+    assert.strictEqual(updatedEmpty, '<w:document></w:document>');
+  });
+  
+  it('should handle undefined input without errors', function() {
+    const updatedContent = replacePlaceholder(undefined, undefined);
+    assert.strictEqual(updatedContent, '');
+  });
+  
+});
+```
+
+### Running Tests:
+After making these changes, run your tests again (`npx mocha posttest.js`) to verify that the modifications have resolved the errors and that all test cases pass successfully.
+
+These adjustments ensure that your document processing functions handle various edge cases gracefully, such as empty or undefined input scenarios. Adjust the tests further if needed based on specific requirements or additional edge cases you need to cover.
