@@ -1,153 +1,48 @@
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { v4: uuidv4 } = require('uuid');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const xpath = require('xpath');
-const assert = require('assert');
+  Document Processing Functions
+    √ should read the content of an existing file in a zip archive (50ms)
+    √ should throw an error if the file does not exist in the zip archive (46ms)
+    √ should update the content of a file in a zip archive (74ms)
+    √ should process simple text values correctly
+    √ should process text object values correctly
+    √ should process array of items correctly
+    √ should process array of objects correctly
+    √ should replace placeholders in the document content
+[xmldom error]  invalid doc source
+@#[line:0,col:undefined]
+    1) should handle empty input gracefully
+[xmldom error]  invalid doc source
+@#[line:0,col:undefined]
+    2) should handle undefined input without errors
+    √ should handle non-existent tags in the document
 
-const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData'); // replace with actual path
 
-// Mock data
-const jsonContent = {
-  "Incident num": "123c",
-  "authors": "kashish",
-  "date": "01/07/2024"
-};
+  9 passing (199ms)
+  2 failing
 
-const mockDocumentContent = `
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="Incident num"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="authors"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="date"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-  </w:body>
-</w:document>`;
+  1) Document Processing Functions
+       should handle empty input gracefully:
+     Error: Context node not found when determining document root.
+      at PathExpr.getRoot (node_modules\xpath\xpath.js:1872:19)
+      at PathExpr.applyLocationPath (node_modules\xpath\xpath.js:2196:60)
+      at PathExpr.evaluate (node_modules\xpath\xpath.js:2211:30)
+      at XPath.evaluate (node_modules\xpath\xpath.js:1375:32)
+      at XPathExpression.evaluate (node_modules\xpath\xpath.js:4536:33)
+      at exports.selectWithResolver (node_modules\xpath\xpath.js:4989:33)
+      at Z:\Desktop\work-addin\node_modules\xpath\xpath.js:4981:28
+      at replacePlaceholder (PostData.js:242:24)
+      at Context.<anonymous> (posttest.js:227:28)
+      at process.processImmediate (node:internal/timers:478:21)
 
-describe('Document Processing Functions', function() {
-
-  it('should read the content of an existing file in a zip archive', function() {
-    const zip = new AdmZip();
-    const fileName = 'test.txt';
-    zip.addFile(fileName, Buffer.from('Test content', 'utf8'));
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
-
-    const content = readZipFile(zipFilePath, fileName);
-    assert.strictEqual(content, 'Test content');
-
-    fs.unlinkSync(zipFilePath); // Clean up
-  });
-
-  it('should throw an error if the file does not exist in the zip archive', function() {
-    const zip = new AdmZip();
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
-
-    assert.throws(() => {
-      readZipFile(zipFilePath, 'nonexistent.txt');
-    }, /Entry not found/);
-
-    fs.unlinkSync(zipFilePath); // Clean up
-  });
-
-  it('should update the content of a file in a zip archive', function() {
-    const zip = new AdmZip();
-    const fileName = 'test.txt';
-    zip.addFile(fileName, Buffer.from('Old content', 'utf8'));
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
-
-    writeZipFile(zipFilePath, fileName, 'New content');
-    const content = readZipFile(zipFilePath, fileName);
-    assert.strictEqual(content, 'New content');
-
-    fs.unlinkSync(zipFilePath); // Clean up
-  });
-
-  it('should process simple text values correctly', function() {
-    assert.strictEqual(processTagValue('simple text'), 'simple text');
-  });
-
-  it('should process text object values correctly', function() {
-    assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
-  });
-
-  it('should process array of items correctly', function() {
-    assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
-  });
-
-  it('should process array of objects correctly', function() {
-    assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
-  });
-
-  it('should replace placeholders in the document content', function() {
-    const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
-    assert(updatedContent.includes('<w:t>123c</w:t>'));
-    assert(updatedContent.includes('<w:t>kashish</w:t>'));
-    assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
-  });
-
-  it('should handle empty input gracefully', function() {
-    const updatedContent = replacePlaceholder('', {});
-    assert.strictEqual(updatedContent, '');
-
-    const emptyJson = {};
-    const emptyDoc = '<w:document></w:document>';
-    const updatedEmpty = replacePlaceholder(emptyDoc, emptyJson);
-    assert.strictEqual(updatedEmpty, '<w:document></w:document>');
-  });
-
-  it('should handle undefined input without errors', function() {
-    const updatedContent = replacePlaceholder(undefined, undefined);
-    assert.strictEqual(updatedContent, '');
-  });
-
-  it('should handle non-existent tags in the document', function() {
-    const mockContentNoTags = `
-      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-        <w:body>
-          <w:sdt>
-            <w:sdtPr>
-              <w:tag w:val="nonexistent_tag"/>
-            </w:sdtPr>
-            <w:sdtContent>
-              <w:r>
-                <w:t>Placeholder</w:t>
-              </w:r>
-            </w:sdtContent>
-          </w:sdt>
-        </w:body>
-      </w:document>`;
-
-    const updatedContent = replacePlaceholder(mockContentNoTags, jsonContent);
-    assert(updatedContent.includes('<w:t>Placeholder</w:t>')); // Placeholder should remain unchanged
-  });
-
-});
+  2) Document Processing Functions
+       should handle undefined input without errors:
+     Error: Context node not found when determining document root.
+      at PathExpr.getRoot (node_modules\xpath\xpath.js:1872:19)
+      at PathExpr.applyLocationPath (node_modules\xpath\xpath.js:2196:60)
+      at PathExpr.evaluate (node_modules\xpath\xpath.js:2211:30)
+      at XPath.evaluate (node_modules\xpath\xpath.js:1375:32)
+      at XPathExpression.evaluate (node_modules\xpath\xpath.js:4536:33)
+      at exports.selectWithResolver (node_modules\xpath\xpath.js:4989:33)
+      at Z:\Desktop\work-addin\node_modules\xpath\xpath.js:4981:28
+      at replacePlaceholder (PostData.js:242:24)
+      at Context.<anonymous> (posttest.js:237:28)
+      at process.processImmediate (node:internal/timers:478:21)
