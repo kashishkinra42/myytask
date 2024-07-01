@@ -42,13 +42,14 @@ function extractTagsFromBody(body) {
         if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          if (tags.hasOwnProperty(tagName)) {
-            if (!Array.isArray(tags[tagName])) {
-              tags[tagName] = [tags[tagName]];
+          if (tags[tagName]) {
+            if (Array.isArray(tags[tagName])) {
+              tags[tagName].push(tagValue);
+            } else {
+              tags[tagName] = [tags[tagName], tagValue];
             }
-            tags[tagName].push(tagValue);
           } else {
-            tags[tagName] = tagValue;
+            tags[tagName] = [tagValue];
           }
         }
       });
