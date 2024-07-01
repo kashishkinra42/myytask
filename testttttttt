@@ -105,23 +105,34 @@ module.exports = { processDocument };
 //   processDocument
 // };
 
-app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
-  if (!req.file) {
-    log(`No file received in the request`);
-    return res.status(400).send('No file uploaded');
-  }
-
-  log(`Received file for extraction: ${req.file.path}`);
-  const filePath = req.file.path;
+app.post('/update-document', async (req, res) => {
+  log(`Received JSON: ${JSON.stringify(req.body)}`);
+  const jsonContent = req.body;
 
   try {
-    const tags = await extractContentControlTags(filePath);
-    res.status(200).json(tags);
+    const updatedFilePath = await processDocument(jsonContent);
+
+    res.setHeader('Content-Disposition', 'attachment; filename="updated_document.docx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    const fileStream = fs.createReadStream(updatedFilePath);
+
+    fileStream.pipe(res).on('finish', () => {
+      fs.unlink(updatedFilePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting file:', unlinkErr);
+        }
+      });
+    });
+
+    fileStream.on('error', (err) => {
+      console.error('Error reading file:', err);
+      res.status(500).send('Error reading file');
+    });
+
   } catch (error) {
-    console.error('Error extracting tags:', error);
-    res.status(500).send('Error extracting tags');
-  } finally {
-    fs.unlinkSync(filePath);
+    console.error('Error processing document:', error);
+    res.status(500).send('Error processing document');
   }
 });
 
