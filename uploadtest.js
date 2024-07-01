@@ -10,9 +10,28 @@ describe('extractContentControlTags', () => {
   let jszipStub;
   let parseStringPromiseStub;
 
+  const mockDocxFile = Buffer.from('mock docx file content'); // Mock binary content of a .docx file
+  const mockXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:body>
+      <w:sdt>
+        <w:sdtPr>
+          <w:tag w:val="tag1"/>
+        </w:sdtPr>
+        <w:sdtContent>
+          <w:p>
+            <w:r>
+              <w:t>Hello, World!</w:t>
+            </w:r>
+          </w:p>
+        </w:sdtContent>
+      </w:sdt>
+    </w:body>
+  </w:document>`;
+
   beforeEach(() => {
     // Mock fs.promises.readFile
-    readFileStub = sinon.stub(fs.promises, 'readFile');
+    readFileStub = sinon.stub(fs.promises, 'readFile').resolves(mockDocxFile);
 
     // Mock JSZip.loadAsync and .file().async()
     jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
@@ -76,27 +95,6 @@ describe('extractContentControlTags', () => {
   });
 
   it('should extract content control tags from the document', async () => {
-    const mockDocxFile = 'mock data'; // Replace with your actual mock data
-    const mockXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-      <w:body>
-        <w:sdt>
-          <w:sdtPr>
-            <w:tag w:val="tag1"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:p>
-              <w:r>
-                <w:t>Hello, World!</w:t>
-              </w:r>
-            </w:p>
-          </w:sdtContent>
-        </w:sdt>
-      </w:body>
-    </w:document>`;
-
-    readFileStub.resolves(mockDocxFile);
-
     const result = await this.extractContentControlTags('path_to_mock_file.docx');
 
     assert.deepEqual(result, {
@@ -116,3 +114,4 @@ describe('extractContentControlTags', () => {
     }, new Error('File not found'));
   });
 });
+
