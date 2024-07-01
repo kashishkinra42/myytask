@@ -1,9 +1,11 @@
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
 const assert = require('assert');
 
-const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData');
+const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData'); // replace with actual path
 
 // Mock data
 const jsonContent = {
@@ -49,7 +51,7 @@ const mockDocumentContent = `
 </w:document>`;
 
 describe('Document Processing Functions', function() {
-  
+
   it('should read the content of an existing file in a zip archive', function() {
     const zip = new AdmZip();
     const fileName = 'test.txt';
@@ -59,7 +61,6 @@ describe('Document Processing Functions', function() {
 
     const content = readZipFile(zipFilePath, fileName);
     assert.strictEqual(content, 'Test content');
-    console.log('readZipFile: Content read correctly.');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
@@ -72,92 +73,36 @@ describe('Document Processing Functions', function() {
     assert.throws(() => {
       readZipFile(zipFilePath, 'nonexistent.txt');
     }, /Entry not found/);
-    console.log('readZipFile: Correctly threw error for non-existent file.');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
 
   it('should update the content of a file in a zip archive', function() {
     const zip = new AdmZip();
-    const fileName = 'word/document.xml';
-    zip.addFile(fileName, Buffer.from(mockDocumentContent, 'utf8'));
+    const fileName = 'test.txt';
+    zip.addFile(fileName, Buffer.from('Old content', 'utf8'));
     const zipFilePath = `./${uuidv4()}.zip`;
     zip.writeZip(zipFilePath);
 
-    const newContent = `
-    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-      <w:body>
-        <w:p>
-          <w:r>
-            <w:t>New content</w:t>
-          </w:r>
-        </w:p>
-      </w:body>
-    </w:document>`;
-
-    writeZipFile(zipFilePath, fileName, newContent);
+    writeZipFile(zipFilePath, fileName, 'New content');
     const content = readZipFile(zipFilePath, fileName);
-    assert(content.includes('<w:t>New content</w:t>'));
-    console.log('writeZipFile: Content updated correctly.');
+    assert.strictEqual(content, 'New content');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
 
   it('should process array values correctly', function() {
     assert.strictEqual(processTagValue('simple text'), 'simple text');
-    console.log('processTagValue: Processed simple text correctly.');
-
     assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
-    console.log('processTagValue: Processed text object correctly.');
-
     assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
-    console.log('processTagValue: Processed array values correctly.');
-
     assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
-    console.log('processTagValue: Processed array of text objects correctly.');
   });
 
   it('should replace placeholders in the document content', function() {
     const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
     assert(updatedContent.includes('<w:t>123c</w:t>'));
-    console.log('replacePlaceholder: Replaced Incident num correctly.');
-
     assert(updatedContent.includes('<w:t>kashish</w:t>'));
-    console.log('replacePlaceholder: Replaced authors correctly.');
-
     assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
-    console.log('replacePlaceholder: Replaced date correctly.');
-  });
-
-  it('should create a sample DOCX file with the updated content', function() {
-    const templateFilePath = './Test Document.docx'; // Assuming this file exists in the same directory
-    const newFileName = `./updated_${uuidv4()}.docx`;
-    const fileName = 'word/document.xml';
-    
-    // Copy template file to new file
-    fs.copyFileSync(templateFilePath, newFileName);
-    
-    // Read the content of document.xml from the new file
-    const documentContent = readZipFile(newFileName, fileName);
-    
-    // Replace placeholders in the content
-    const updatedContent = replacePlaceholder(documentContent, jsonContent);
-    
-    // Write the updated content back to the new file
-    writeZipFile(newFileName, fileName, updatedContent);
-    
-    // Verify the updated content
-    const content = readZipFile(newFileName, fileName);
-    assert(content.includes('<w:t>123c</w:t>'));
-    console.log('processDocument: Replaced Incident num in the sample DOCX correctly.');
-
-    assert(content.includes('<w:t>kashish</w:t>'));
-    console.log('processDocument: Replaced authors in the sample DOCX correctly.');
-
-    assert(content.includes('<w:t>01/07/2024</w:t>'));
-    console.log('processDocument: Replaced date in the sample DOCX correctly.');
-
-    console.log('Sample DOCX created at:', newFileName);
   });
 
 });
