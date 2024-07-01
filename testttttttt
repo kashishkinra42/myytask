@@ -1,158 +1,57 @@
-const assert = require('assert');
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('../src/yourModule'); // Adjust the path accordingly
 
-describe('Document Processing Functions', () => {
+  Document Processing Functions
+    readZipFile
+      1) should read the content of an existing file in a zip archive
+      2) should throw an error if the file does not exist in the zip archive
+    writeZipFile
+      3) should update the content of a file in a zip archive
+    processTagValue
+      √ should process array values correctly
+      √ should process object values with text property correctly
+      √ should return primitive values as is
+    replacePlaceholder
+[2024-07-01T02:34:33.975Z] Entering replacePlaceholder
+[2024-07-01T02:34:33.982Z] Processing tag: Incident Number
+[2024-07-01T02:34:33.983Z] Exiting replacePlaceholder
+      √ should replace placeholders in the document content
+    processDocument
+      4) should create a new document with replaced placeholders
 
-  describe('readZipFile', () => {
-    it('should read the content of an existing file in a zip archive', () => {
-      // Create a sample zip file with content
-      const zip = new AdmZip();
-      const xmlContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>1234</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
-      zip.writeZip('./test.zip');
 
-      const content = readZipFile('./test.zip', 'word/document.xml');
-      assert.strictEqual(content.includes('<w:t>1234</w:t>'), true);
+  4 passing (255ms)
+  4 failing
 
-      fs.unlinkSync('./test.zip');
-    });
+  1) Document Processing Functions
+       readZipFile
+         should read the content of an existing file in a zip archive:
+     TypeError: Cannot read properties of null (reading 'getData')
+      at readZipFile (PostData.js:91:28)
+      at Context.<anonymous> (posttest.js:144:23)
+      at process.processImmediate (node:internal/timers:478:21)
 
-    it('should throw an error if the file does not exist in the zip archive', () => {
-      const zip = new AdmZip();
-      zip.writeZip('./test.zip');
+  2) Document Processing Functions
+       readZipFile
+         should throw an error if the file does not exist in the zip archive:
+     AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Entry not found/. Input:
 
-      assert.throws(() => {
-        readZipFile('./test.zip', 'nonexistent.xml');
-      }, /Entry not found/);
+"TypeError: Cannot read properties of null (reading 'getData')"
 
-      fs.unlinkSync('./test.zip');
-    });
-  });
+      at Context.<anonymous> (posttest.js:154:14)
+      at process.processImmediate (node:internal/timers:478:21)
 
-  describe('writeZipFile', () => {
-    it('should update the content of a file in a zip archive', () => {
-      const zip = new AdmZip();
-      const xmlContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>Initial content</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
-      zip.writeZip('./test.zip');
+  3) Document Processing Functions
+       writeZipFile
+         should update the content of a file in a zip archive:
+     TypeError: Cannot read properties of null (reading 'getData')
+      at readZipFile (PostData.js:91:28)
+      at Context.<anonymous> (posttest.js:186:30)
+      at process.processImmediate (node:internal/timers:478:21)
 
-      // Update the content and verify
-      writeZipFile('./test.zip', 'word/document.xml', xmlContent.replace('Initial content', 'Updated content'));
-      const updatedContent = readZipFile('./test.zip', 'word/document.xml');
-      assert.strictEqual(updatedContent.includes('<w:t>Updated content</w:t>'), true);
-
-      fs.unlinkSync('./test.zip');
-    });
-  });
-
-  describe('processTagValue', () => {
-    it('should process array values correctly', () => {
-      const result = processTagValue(['item1', 'item2']);
-      assert.strictEqual(result, '1. item1\n2. item2');
-    });
-
-    it('should process object values with text property correctly', () => {
-      const result = processTagValue({ text: 'Hello, World!' });
-      assert.strictEqual(result, 'Hello, World!');
-    });
-
-    it('should return primitive values as is', () => {
-      const result = processTagValue('Just a string');
-      assert.strictEqual(result, 'Just a string');
-    });
-  });
-
-  describe('replacePlaceholder', () => {
-    it('should replace placeholders in the document content', () => {
-      const documentContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>Initial content</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      const jsonContent = { 'Incident Number': '5678' };
-
-      const result = replacePlaceholder(documentContent, jsonContent);
-      assert.strictEqual(result.includes('<w:t>5678</w:t>'), true);
-    });
-  });
-
-  describe('processDocument', () => {
-    it('should create a new document with replaced placeholders', async () => {
-      const jsonContent = { 'Incident Number': '5678' };
-      const templateFilePath = './Test Document.docx'; // Adjust this path to your template file
-      const fileName = 'word/document.xml'; // Adjust this path to match the document.xml location in your template
-
-      // Create a template Word document with a placeholder
-      const zip = new AdmZip();
-      const xmlContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>Initial content</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      zip.addFile(fileName, Buffer.from(xmlContent, 'utf8'));
-      zip.writeZip(templateFilePath);
-
-      const newFilePath = await processDocument(jsonContent);
-      const newContent = readZipFile(newFilePath, fileName);
-      assert.strictEqual(newContent.includes('<w:t>5678</w:t>'), true);
-
-      fs.unlinkSync(templateFilePath);
-      fs.unlinkSync(newFilePath);
-    });
-  });
-
-});
+  4) Document Processing Functions
+       processDocument
+         should create a new document with replaced placeholders:
+     TypeError: Cannot read properties of null (reading 'getData')
+      at readZipFile (PostData.js:91:28)
+      at processDocument (PostData.js:168:27)
+      at Context.<anonymous> (posttest.js:262:33)
+      at process.processImmediate (node:internal/timers:478:21)
