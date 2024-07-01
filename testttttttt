@@ -1,11 +1,109 @@
+Here is the complete updated code with tests for reading and writing a DOCX file, processing tags, replacing placeholders, and creating a sample DOCX file:
+
+### `PostData.js`
+
+```javascript
+const AdmZip = require('adm-zip');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
+
+/**
+ * Reads the content of a file in a zip archive.
+ * @param {string} zipFilePath - Path to the zip file.
+ * @param {string} fileName - Name of the file within the zip archive.
+ * @returns {string} - The content of the file.
+ * @throws Will throw an error if the file is not found.
+ */
+function readZipFile(zipFilePath, fileName) {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(fileName);
+  if (!zipEntry) {
+    throw new Error(`Entry not found: ${fileName}`);
+  }
+  return zipEntry.getData().toString('utf8');
+}
+
+/**
+ * Updates the content of a file in a zip archive.
+ * @param {string} zipFilePath - Path to the zip file.
+ * @param {string} fileName - Name of the file within the zip archive.
+ * @param {string} content - New content for the file.
+ */
+function writeZipFile(zipFilePath, fileName, content) {
+  const zip = new AdmZip(zipFilePath);
+  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+}
+
+/**
+ * Processes a tag value, converting it to a string representation.
+ * @param {any} value - The value to process.
+ * @returns {string} - The processed value as a string.
+ */
+function processTagValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => `${index + 1}. ${item.text || item}`).join('\n');
+  }
+  if (typeof value === 'object' && value !== null) {
+    return value.text || '';
+  }
+  return String(value);
+}
+
+/**
+ * Replaces placeholders in the document content with the corresponding values from the data.
+ * @param {string} documentContent - The document content with placeholders.
+ * @param {Object} data - The data containing values to replace the placeholders.
+ * @returns {string} - The updated document content.
+ */
+function replacePlaceholder(documentContent, data) {
+  const doc = new DOMParser().parseFromString(documentContent, 'application/xml');
+  const select = xpath.useNamespaces({ w: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main' });
+
+  const placeholders = select('//w:sdt', doc);
+  placeholders.forEach((placeholder) => {
+    const tag = select('string(.//w:tag/@w:val)', placeholder);
+    if (data[tag]) {
+      const textNode = select('.//w:t', placeholder)[0];
+      if (textNode) {
+        textNode.textContent = processTagValue(data[tag]);
+      }
+    }
+  });
+
+  return new XMLSerializer().serializeToString(doc);
+}
+
+/**
+ * Processes the document by reading it from the zip, replacing placeholders, and writing it back.
+ * @param {string} zipFilePath - Path to the zip file.
+ * @param {Object} data - The data containing values to replace the placeholders.
+ */
+function processDocument(zipFilePath, data) {
+  const fileName = 'word/document.xml';
+  const documentContent = readZipFile(zipFilePath, fileName);
+  const updatedContent = replacePlaceholder(documentContent, data);
+  writeZipFile(zipFilePath, fileName, updatedContent);
+}
+
+module.exports = {
+  readZipFile,
+  writeZipFile,
+  processTagValue,
+  replacePlaceholder,
+  processDocument,
+};
+```
+
+### `posttest.js`
+
+```javascript
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const xpath = require('xpath');
 const assert = require('assert');
 
-const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData'); // replace with actual path
+const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData');
 
 // Mock data
 const jsonContent = {
@@ -51,7 +149,7 @@ const mockDocumentContent = `
 </w:document>`;
 
 describe('Document Processing Functions', function() {
-
+  
   it('should read the content of an existing file in a zip archive', function() {
     const zip = new AdmZip();
     const fileName = 'test.txt';
@@ -61,6 +159,7 @@ describe('Document Processing Functions', function() {
 
     const content = readZipFile(zipFilePath, fileName);
     assert.strictEqual(content, 'Test content');
+    console.log('readZipFile: Content read correctly.');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
@@ -73,6 +172,7 @@ describe('Document Processing Functions', function() {
     assert.throws(() => {
       readZipFile(zipFilePath, 'nonexistent.txt');
     }, /Entry not found/);
+    console.log('readZipFile: Correctly threw error for non-existent file.');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
@@ -84,7 +184,6 @@ describe('Document Processing Functions', function() {
     const zipFilePath = `./${uuidv4()}.zip`;
     zip.writeZip(zipFilePath);
 
-    // New content to replace old content in the DOCX file
     const newContent = `
     <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
       <w:body>
@@ -99,22 +198,46 @@ describe('Document Processing Functions', function() {
     writeZipFile(zipFilePath, fileName, newContent);
     const content = readZipFile(zipFilePath, fileName);
     assert(content.includes('<w:t>New content</w:t>'));
+    console.log('writeZipFile: Content updated correctly.');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
 
   it('should process array values correctly', function() {
     assert.strictEqual(processTagValue('simple text'), 'simple text');
+    console.log('processTagValue: Processed simple text correctly.');
+
     assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
+    console.log('processTagValue: Processed text object correctly.');
+
     assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
+    console.log('processTagValue: Processed array values correctly.');
+
     assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
+    console.log('processTagValue: Processed array of text objects correctly.');
   });
 
   it('should replace placeholders in the document content', function() {
     const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
     assert(updatedContent.includes('<w:t>123c</w:t>'));
+    console.log('replacePlaceholder: Replaced Incident num correctly.');
+
     assert(updatedContent.includes('<w:t>kashish</w:t>'));
+    console.log('replacePlaceholder: Replaced authors correctly.');
+
     assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
+    console.log('replacePlaceholder: Replaced date correctly.');
   });
 
-});
+  it('should create a sample DOCX file with the updated content', function() {
+    const zip = new AdmZip();
+    const fileName = 'word/document.xml';
+    zip.addFile(fileName, Buffer.from(mockDocumentContent, 'utf8'));
+    const zipFilePath = `./${uuidv4()}.zip`;
+    zip.writeZip(zipFilePath);
+
+    processDocument(zipFilePath, jsonContent);
+
+    const content = readZipFile(zipFilePath, fileName);
+    assert(content.includes('<w:t>123c</w:t>'));
+   
