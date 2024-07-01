@@ -79,14 +79,26 @@ describe('Document Processing Functions', function() {
 
   it('should update the content of a file in a zip archive', function() {
     const zip = new AdmZip();
-    const fileName = 'test.txt';
-    zip.addFile(fileName, Buffer.from('Old content', 'utf8'));
+    const fileName = 'word/document.xml';
+    zip.addFile(fileName, Buffer.from(mockDocumentContent, 'utf8'));
     const zipFilePath = `./${uuidv4()}.zip`;
     zip.writeZip(zipFilePath);
 
-    writeZipFile(zipFilePath, fileName, 'New content');
+    // New content to replace old content in the DOCX file
+    const newContent = `
+    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      <w:body>
+        <w:p>
+          <w:r>
+            <w:t>New content</w:t>
+          </w:r>
+        </w:p>
+      </w:body>
+    </w:document>`;
+
+    writeZipFile(zipFilePath, fileName, newContent);
     const content = readZipFile(zipFilePath, fileName);
-    assert.strictEqual(content, 'New content');
+    assert(content.includes('<w:t>New content</w:t>'));
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
