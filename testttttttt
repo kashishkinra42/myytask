@@ -42,6 +42,7 @@ function extractTagsFromBody(body) {
         if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
+          console.log(`Tag found: ${tagName} with value: ${JSON.stringify(tagValue)}`);
           if (!tags[tagName]) {
             tags[tagName] = [];
           }
@@ -57,6 +58,7 @@ function extractTagsFromBody(body) {
   }
 
   traverseNodes(body);
+  console.log('Tags after traversal:', JSON.stringify(tags, null, 2));
   return tags;
 }
 
