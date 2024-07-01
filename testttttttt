@@ -78,6 +78,7 @@ function extractTagsFromBody(body) {
 function extractTagValue(content) {
   let text = '';
   let listItems = [];
+  let tables = [];
 
   function traverseContent(contentNode) {
     if (contentNode['w:p']) {
@@ -98,6 +99,13 @@ function extractTagValue(content) {
           } else if (typeof pText === 'object' && pText.text.trim() !== '') {
             text += pText.text;
           }
+        }
+      });
+    } else if (contentNode['w:tbl']) {
+      contentNode['w:tbl'].forEach(tblNode => {
+        const table = extractTableFromNode(tblNode);
+        if (table) {
+          tables.push(table);
         }
       });
     }
@@ -135,10 +143,28 @@ function extractTagValue(content) {
     return nodeText;
   }
 
+  function extractTableFromNode(tblNode) {
+    const table = [];
+    if (tblNode['w:tr']) {
+      tblNode['w:tr'].forEach(trNode => {
+        const row = [];
+        if (trNode['w:tc']) {
+          trNode['w:tc'].forEach(tcNode => {
+            const cellText = extractTextFromNode(tcNode);
+            row.push(cellText);
+          });
+        }
+        table.push(row);
+      });
+    }
+    return table;
+  }
+
   traverseContent(content);
 
-  if (listItems.length > 0) {
-    // Return list items as an array of strings or objects
+  if (tables.length > 0) {
+    return tables;
+  } else if (listItems.length > 0) {
     return listItems;
   } else {
     return text;
