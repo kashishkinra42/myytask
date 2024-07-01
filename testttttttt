@@ -43,10 +43,15 @@ function extractTagsFromBody(body) {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
           console.log(`Tag found: ${tagName} with value: ${JSON.stringify(tagValue)}`);
-          if (!tags[tagName]) {
-            tags[tagName] = [];
+          if (tags[tagName]) {
+            if (Array.isArray(tags[tagName])) {
+              tags[tagName].push(tagValue);
+            } else {
+              tags[tagName] = [tags[tagName], tagValue];
+            }
+          } else {
+            tags[tagName] = tagValue;
           }
-          tags[tagName].push(tagValue);
         }
       });
     }
@@ -58,6 +63,14 @@ function extractTagsFromBody(body) {
   }
 
   traverseNodes(body);
+
+  // Convert any single-value arrays to strings
+  Object.keys(tags).forEach(tagName => {
+    if (Array.isArray(tags[tagName]) && tags[tagName].length === 1) {
+      tags[tagName] = tags[tagName][0];
+    }
+  });
+
   console.log('Tags after traversal:', JSON.stringify(tags, null, 2));
   return tags;
 }
