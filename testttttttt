@@ -1,37 +1,4 @@
-
-
-Z:\Desktop\work-addin>npx mocha posttest.js
-
-
-  Document Processing Functions
-    √ should read the content of an existing file in a zip archive (54ms)
-    √ should throw an error if the file does not exist in the zip archive (49ms)
-    √ should update the content of a file in a zip archive (81ms)
-    √ should process simple text values correctly
-    √ should process text object values correctly
-    √ should process array of items correctly
-    √ should process array of objects correctly
-    √ should replace placeholders in the document content
-    1) should handle empty input gracefully
-    √ should handle undefined input without errors
-    √ should handle non-existent tags in the document
-
-
-  10 passing (223ms)
-  1 failing
-
-  1) Document Processing Functions
-       should handle empty input gracefully:
-
-      AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
-
-  assert.ok(updatedContent === '<w:document/>' || updatedContent === '<w:document></w:document>')
-
-      + expected - actual
-
-      -false
-      +true
-
-      at Context.<anonymous> (posttest.js:229:10)
-      at process.processImmediate (node:internal/timers:478:21)
-
+it('should handle empty input gracefully', function() {
+  const updatedContent = replacePlaceholder('', {});
+  assert.strictEqual(updatedContent.trim(), '<w:document/>');
+});
