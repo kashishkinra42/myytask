@@ -1,50 +1,160 @@
+const assert = require('assert');
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { readZipFile, writeZipFile, processTagValue, replacePlaceholder, processDocument } = require('../src/yourModule'); // Adjust path to your module
 
+describe('Document Processing Functions', () => {
 
-  Document Processing Functions
-    readZipFile
-      1) should read the content of an existing file in a zip archive
-      √ should throw an error if the file does not exist in the zip archive (46ms)
-    writeZipFile
-      2) should update the content of a file in a zip archive
-    processTagValue
-      √ should process array values correctly
-      √ should process object values with text property correctly
-      √ should return primitive values as is
-    replacePlaceholder
-[2024-07-01T02:39:12.426Z] Entering replacePlaceholder
-[2024-07-01T02:39:12.433Z] Processing tag: Incident Number
-[2024-07-01T02:39:12.434Z] Exiting replacePlaceholder
-      √ should replace placeholders in the document content
-    processDocument
-      3) should create a new document with replaced placeholders
+  describe('readZipFile', () => {
+    it('should read the content of an existing file in a zip archive', () => {
+      // Create a sample zip file with content
+      const zip = new AdmZip();
+      const xmlContent = `
+        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+          <w:sdtPr>
+            <w:tag w:val="Incident Number"/>
+          </w:sdtPr>
+          <w:sdtContent>
+            <w:tc>
+              <w:p>
+                <w:r>
+                  <w:t>1234</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+          </w:sdtContent>
+        </w:sdt>
+      `;
+      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
+      zip.writeZip('./test.zip');
 
+      const content = readZipFile('./test.zip', 'word/document.xml');
+      assert.strictEqual(content.includes('<w:t>1234</w:t>'), true);
 
-  5 passing (263ms)
-  3 failing
+      fs.unlinkSync('./test.zip');
+    });
 
-  1) Document Processing Functions
-       readZipFile
-         should read the content of an existing file in a zip archive:
-     Error: Entry not found: word/document.xml
-      at readZipFile (PostData.js:199:11)
-      at Context.<anonymous> (posttest.js:144:23)
-      at process.processImmediate (node:internal/timers:478:21)
+    it('should throw an error if the file does not exist in the zip archive', () => {
+      const zip = new AdmZip();
+      zip.writeZip('./test.zip');
 
-  2) Document Processing Functions
-       writeZipFile
-         should update the content of a file in a zip archive:
-     Error: Entry not found: word/document.xml
-      at readZipFile (PostData.js:199:11)
-      at Context.<anonymous> (posttest.js:186:30)
-      at process.processImmediate (node:internal/timers:478:21)
+      assert.throws(() => {
+        readZipFile('./test.zip', 'nonexistent.xml');
+      }, /Entry not found/);
 
-  3) Document Processing Functions
-       processDocument
-         should create a new document with replaced placeholders:
-     Error: Entry not found: word/document.xml
-      at readZipFile (PostData.js:199:11)
-      at processDocument (PostData.js:278:27)
-      at Context.<anonymous> (posttest.js:265:33)
-      at process.processImmediate (node:internal/timers:478:21)
+      fs.unlinkSync('./test.zip');
+    });
+  });
 
+  describe('writeZipFile', () => {
+    it('should update the content of a file in a zip archive', () => {
+      const zip = new AdmZip();
+      const xmlContent = `
+        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+          <w:sdtPr>
+            <w:tag w:val="Incident Number"/>
+          </w:sdtPr>
+          <w:sdtContent>
+            <w:tc>
+              <w:p>
+                <w:r>
+                  <w:t>Initial content</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+          </w:sdtContent>
+        </w:sdt>
+      `;
+      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
+      zip.writeZip('./test.zip');
 
+      // Update the content and verify
+      writeZipFile('./test.zip', 'word/document.xml', xmlContent.replace('Initial content', 'Updated content'));
+      const updatedContent = readZipFile('./test.zip', 'word/document.xml');
+      assert.strictEqual(updatedContent.includes('<w:t>Updated content</w:t>'), true);
+
+      fs.unlinkSync('./test.zip');
+    });
+  });
+
+  describe('processTagValue', () => {
+    it('should process array values correctly', () => {
+      const result = processTagValue(['item1', 'item2']);
+      assert.strictEqual(result, '1. item1\n2. item2');
+    });
+
+    it('should process object values with text property correctly', () => {
+      const result = processTagValue({ text: 'Hello, World!' });
+      assert.strictEqual(result, 'Hello, World!');
+    });
+
+    it('should return primitive values as is', () => {
+      const result = processTagValue('Just a string');
+      assert.strictEqual(result, 'Just a string');
+    });
+  });
+
+  describe('replacePlaceholder', () => {
+    it('should replace placeholders in the document content', () => {
+      const documentContent = `
+        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+          <w:sdtPr>
+            <w:tag w:val="Incident Number"/>
+          </w:sdtPr>
+          <w:sdtContent>
+            <w:tc>
+              <w:p>
+                <w:r>
+                  <w:t>Initial content</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+          </w:sdtContent>
+        </w:sdt>
+      `;
+      const jsonContent = { 'Incident Number': '5678' };
+
+      const result = replacePlaceholder(documentContent, jsonContent);
+      assert.strictEqual(result.includes('<w:t>5678</w:t>'), true);
+    });
+  });
+
+  describe('processDocument', () => {
+    it('should create a new document with replaced placeholders', async () => {
+      const jsonContent = { 'Incident Number': '5678' };
+      const templateFilePath = './Test Document.docx'; // Adjust this path to your template file
+      const fileName = 'word/document.xml'; // Adjust this path to match document.xml in your template
+
+      // Create a template Word document with a placeholder
+      const zip = new AdmZip();
+      const xmlContent = `
+        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+          <w:sdtPr>
+            <w:tag w:val="Incident Number"/>
+          </w:sdtPr>
+          <w:sdtContent>
+            <w:tc>
+              <w:p>
+                <w:r>
+                  <w:t>Initial content</w:t>
+                </w:r>
+              </w:p>
+            </w:tc>
+          </w:sdtContent>
+        </w:sdt>
+      `;
+      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
+      zip.writeZip(templateFilePath);
+
+      // Test processDocument function
+      const newFileName = await processDocument(jsonContent);
+      const updatedContent = readZipFile(newFileName, fileName);
+      assert.strictEqual(updatedContent.includes('<w:t>5678</w:t>'), true);
+
+      // Clean up test files
+      fs.unlinkSync(templateFilePath);
+      fs.unlinkSync(newFileName);
+    });
+  });
+
+});
