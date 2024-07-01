@@ -1,55 +1,3 @@
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { v4: uuidv4 } = require('uuid');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const xpath = require('xpath');
-const assert = require('assert');
-
-const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData'); // replace with actual path
-
-// Mock data
-const jsonContent = {
-  "Incident num": "123c",
-  "authors": "kashish",
-  "date": "01/07/2024"
-};
-
-const mockDocumentContent = `
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="Incident num"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="authors"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="date"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-  </w:body>
-</w:document>`;
-
 describe('Document Processing Functions', function() {
 
   it('should read the content of an existing file in a zip archive', function() {
@@ -61,6 +9,7 @@ describe('Document Processing Functions', function() {
 
     const content = readZipFile(zipFilePath, fileName);
     assert.strictEqual(content, 'Test content');
+    console.log('Assertion 1: Passed');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
@@ -73,6 +22,7 @@ describe('Document Processing Functions', function() {
     assert.throws(() => {
       readZipFile(zipFilePath, 'nonexistent.txt');
     }, /Entry not found/);
+    console.log('Assertion 2: Passed');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
@@ -87,22 +37,35 @@ describe('Document Processing Functions', function() {
     writeZipFile(zipFilePath, fileName, 'New content');
     const content = readZipFile(zipFilePath, fileName);
     assert.strictEqual(content, 'New content');
+    console.log('Assertion 3: Passed');
 
     fs.unlinkSync(zipFilePath); // Clean up
   });
 
   it('should process array values correctly', function() {
     assert.strictEqual(processTagValue('simple text'), 'simple text');
+    console.log('Assertion 4: Passed');
+    
     assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
+    console.log('Assertion 5: Passed');
+    
     assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
+    console.log('Assertion 6: Passed');
+    
     assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
+    console.log('Assertion 7: Passed');
   });
 
   it('should replace placeholders in the document content', function() {
     const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
     assert(updatedContent.includes('<w:t>123c</w:t>'));
+    console.log('Assertion 8: Passed');
+    
     assert(updatedContent.includes('<w:t>kashish</w:t>'));
+    console.log('Assertion 9: Passed');
+    
     assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
+    console.log('Assertion 10: Passed');
   });
 
 });
