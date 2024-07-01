@@ -1,125 +1,197 @@
-const assert = require('assert');
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
-const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('../src/yourModule'); // Adjust the path accordingly
-
-describe('Document Processing Functions', () => {
-
-  describe('readZipFile', () => {
-    it('should read the content of an existing file in a zip archive', () => {
-      const zip = new AdmZip();
-      zip.addFile('test.txt', Buffer.from('Hello, World!', 'utf8'));
-      zip.writeZip('./test.zip');
-
-      const content = readZipFile('./test.zip', 'test.txt');
-      assert.strictEqual(content, 'Hello, World!');
-
-      fs.unlinkSync('./test.zip');
-    });
-
-    it('should throw an error if the file does not exist in the zip archive', () => {
-      const zip = new AdmZip();
-      zip.writeZip('./test.zip');
-
-      assert.throws(() => {
-        readZipFile('./test.zip', 'nonexistent.txt');
-      }, /Entry not found/);
-
-      fs.unlinkSync('./test.zip');
-    });
-  });
-
-  describe('writeZipFile', () => {
-    it('should update the content of a file in a zip archive', () => {
-      const zip = new AdmZip();
-      zip.addFile('test.txt', Buffer.from('Hello, World!', 'utf8'));
-      zip.writeZip('./test.zip');
-
-      writeZipFile('./test.zip', 'test.txt', 'Updated content');
-      const content = readZipFile('./test.zip', 'test.txt');
-      assert.strictEqual(content, 'Updated content');
-
-      fs.unlinkSync('./test.zip');
-    });
-  });
-
-  describe('processTagValue', () => {
-    it('should process array values correctly', () => {
-      const result = processTagValue(['item1', 'item2']);
-      assert.strictEqual(result, '1. item1\n2. item2');
-    });
-
-    it('should process object values with text property correctly', () => {
-      const result = processTagValue({ text: 'Hello, World!' });
-      assert.strictEqual(result, 'Hello, World!');
-    });
-
-    it('should return primitive values as is', () => {
-      const result = processTagValue('Just a string');
-      assert.strictEqual(result, 'Just a string');
-    });
-  });
-
-  describe('replacePlaceholder', () => {
-    it('should replace placeholders in the document content', () => {
-      const documentContent = `
-        <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdt>
-            <w:sdtPr>
-              <w:tag w:val="placeholder"/>
-            </w:sdtPr>
-            <w:sdtContent>
-              <w:p>
-                <w:r>
-                  <w:t>Old content</w:t>
-                </w:r>
-              </w:p>
-            </w:sdtContent>
-          </w:sdt>
-        </w:document>
-      `;
-      const jsonContent = { placeholder: 'New content' };
-
-      const result = replacePlaceholder(documentContent, jsonContent);
-      assert(result.includes('New content'));
-    });
-  });
-
-  describe('processDocument', () => {
-    it('should create a new document with replaced placeholders', async () => {
-      const jsonContent = { placeholder: 'New content' };
-      const templateFilePath = './Test Document.docx'; // Adjust this path to your template file
-      const fileName = 'word/document.xml'; // Adjust this path to match the document.xml location in your template
-
-      // Create a template Word document with a placeholder
-      const zip = new AdmZip();
-      const docContent = `
-        <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdt>
-            <w:sdtPr>
-              <w:tag w:val="placeholder"/>
-            </w:sdtPr>
-            <w:sdtContent>
-              <w:p>
-                <w:r>
-                  <w:t>Old content</w:t>
-                </w:r>
-              </w:p>
-            </w:sdtContent>
-          </w:sdt>
-        </w:document>
-      `;
-      zip.addFile(fileName, Buffer.from(docContent, 'utf8'));
-      zip.writeZip(templateFilePath);
-
-      const newFilePath = await processDocument(jsonContent);
-      const newContent = readZipFile(newFilePath, fileName);
-      assert(newContent.includes('New content'));
-
-      fs.unlinkSync(templateFilePath);
-      fs.unlinkSync(newFilePath);
-    });
-  });
-
-});
+               "w:sdt": [
+                  {
+                    "w:sdtPr": [
+                      {
+                        "w:rPr": [
+                          {
+                            "w:sz": [
+                              {
+                                "$": {
+                                  "w:val": "28"
+                                }
+                              }
+                            ],
+                            "w:szCs": [
+                              {
+                                "$": {
+                                  "w:val": "28"
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "w:tag": [
+                          {
+                            "$": {
+                              "w:val": "Incident Number"
+                            }
+                          }
+                        ],
+                        "w:id": [
+                          {
+                            "$": {
+                              "w:val": "-417872705"
+                            }
+                          }
+                        ],
+                        "w:lock": [
+                          {
+                            "$": {
+                              "w:val": "sdtLocked"
+                            }
+                          }
+                        ],
+                        "w:placeholder": [
+                          {
+                            "w:docPart": [
+                              {
+                                "$": {
+                                  "w:val": "AFEB7AD4BEF043DAA3CCCC17957B42A9"
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "w:showingPlcHdr": [
+                          ""
+                        ],
+                        "w15:color": [
+                          {
+                            "$": {
+                              "w:val": "000000"
+                            }
+                          }
+                        ],
+                        "w15:appearance": [
+                          {
+                            "$": {
+                              "w15:val": "tags"
+                            }
+                          }
+                        ],
+                        "w:text": [
+                          ""
+                        ]
+                      }
+                    ],
+                    "w:sdtEndPr": [
+                      ""
+                    ],
+                    "w:sdtContent": [
+                      {
+                        "w:tc": [
+                          {
+                            "w:tcPr": [
+                              {
+                                "w:tcW": [
+                                  {
+                                    "$": {
+                                      "w:w": "6641",
+                                      "w:type": "dxa"
+                                    }
+                                  }
+                                ]
+                              }
+                            ],
+                            "w:p": [
+                              {
+                                "$": {
+                                  "w14:paraId": "2683408A",
+                                  "w14:textId": "6731DC7C",
+                                  "w:rsidR": "00C319D6",
+                                  "w:rsidRPr": "00591074",
+                                  "w:rsidRDefault": "000612C6",
+                                  "w:rsidP": "000E2B7C"
+                                },
+                                "w:pPr": [
+                                  {
+                                    "w:rPr": [
+                                      {
+                                        "w:sz": [
+                                          {
+                                            "$": {
+                                              "w:val": "28"
+                                            }
+                                          }
+                                        ],
+                                        "w:szCs": [
+                                          {
+                                            "$": {
+                                              "w:val": "28"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ],
+                                "w:r": [
+                                  {
+                                    "$": {
+                                      "w:rsidRPr": "00591074"
+                                    },
+                                    "w:rPr": [
+                                      {
+                                        "w:rStyle": [
+                                          {
+                                            "$": {
+                                              "w:val": "PlaceholderText"
+                                            }
+                                          }
+                                        ],
+                                        "w:color": [
+                                          {
+                                            "$": {
+                                              "w:val": "auto"
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    ],
+                                    "w:t": [
+                                      "1234"
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "$": {
+                  "w:rsidR": "00591074",
+                  "w:rsidRPr": "00591074",
+                  "w14:paraId": "309875F9",
+                  "w14:textId": "77777777",
+                  "w:rsidTr": "000E2B7C"
+                },
+                "w:trPr": [
+                  {
+                    "w:trHeight": [
+                      {
+                        "$": {
+                          "w:val": "354"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "w:tc": [
+                  {
+                    "w:tcPr": [
+                      {
+                        "w:tcW": [
+                          {
+                            "$": {
+                              "w:w": "2948",
+                              "w:type": "dxa"
+                            }
+                          }
+                        ]
+                      }
+                    ],
