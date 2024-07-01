@@ -1,160 +1,127 @@
-const assert = require('assert');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
-const { readZipFile, writeZipFile, processTagValue, replacePlaceholder, processDocument } = require('../src/yourModule'); // Adjust path to your module
+const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
+const assert = require('assert');
 
-describe('Document Processing Functions', () => {
+const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData'); // replace with actual path
 
-  describe('readZipFile', () => {
-    it('should read the content of an existing file in a zip archive', () => {
-      // Create a sample zip file with content
-      const zip = new AdmZip();
-      const xmlContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>1234</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
-      zip.writeZip('./test.zip');
+// Mock data
+const jsonContent = {
+  "Incident num": "123c",
+  "authors": "kashish",
+  "date": "01/07/2024"
+};
 
-      const content = readZipFile('./test.zip', 'word/document.xml');
-      assert.strictEqual(content.includes('<w:t>1234</w:t>'), true);
+const mockDocumentContent = `
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="Incident num"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:r>
+          <w:t>Placeholder</w:t>
+        </w:r>
+      </w:sdtContent>
+    </w:sdt>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="authors"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:r>
+          <w:t>Placeholder</w:t>
+        </w:r>
+      </w:sdtContent>
+    </w:sdt>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="date"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:r>
+          <w:t>Placeholder</w:t>
+        </w:r>
+      </w:sdtContent>
+    </w:sdt>
+  </w:body>
+</w:document>`;
 
-      fs.unlinkSync('./test.zip');
-    });
+// Tests
 
-    it('should throw an error if the file does not exist in the zip archive', () => {
-      const zip = new AdmZip();
-      zip.writeZip('./test.zip');
+// Test readZipFile
+const testReadZipFile = () => {
+  const zip = new AdmZip();
+  const fileName = 'test.txt';
+  zip.addFile(fileName, Buffer.from('Test content', 'utf8'));
+  const zipFilePath = `./${uuidv4()}.zip`;
+  zip.writeZip(zipFilePath);
 
-      assert.throws(() => {
-        readZipFile('./test.zip', 'nonexistent.xml');
-      }, /Entry not found/);
+  const content = readZipFile(zipFilePath, fileName);
+  assert.strictEqual(content, 'Test content');
 
-      fs.unlinkSync('./test.zip');
-    });
-  });
+  fs.unlinkSync(zipFilePath); // Clean up
+  console.log('readZipFile test passed');
+};
 
-  describe('writeZipFile', () => {
-    it('should update the content of a file in a zip archive', () => {
-      const zip = new AdmZip();
-      const xmlContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>Initial content</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
-      zip.writeZip('./test.zip');
+// Test writeZipFile
+const testWriteZipFile = () => {
+  const zip = new AdmZip();
+  const fileName = 'test.txt';
+  zip.addFile(fileName, Buffer.from('Old content', 'utf8'));
+  const zipFilePath = `./${uuidv4()}.zip`;
+  zip.writeZip(zipFilePath);
 
-      // Update the content and verify
-      writeZipFile('./test.zip', 'word/document.xml', xmlContent.replace('Initial content', 'Updated content'));
-      const updatedContent = readZipFile('./test.zip', 'word/document.xml');
-      assert.strictEqual(updatedContent.includes('<w:t>Updated content</w:t>'), true);
+  writeZipFile(zipFilePath, fileName, 'New content');
+  const content = readZipFile(zipFilePath, fileName);
+  assert.strictEqual(content, 'New content');
 
-      fs.unlinkSync('./test.zip');
-    });
-  });
+  fs.unlinkSync(zipFilePath); // Clean up
+  console.log('writeZipFile test passed');
+};
 
-  describe('processTagValue', () => {
-    it('should process array values correctly', () => {
-      const result = processTagValue(['item1', 'item2']);
-      assert.strictEqual(result, '1. item1\n2. item2');
-    });
+// Test processTagValue
+const testProcessTagValue = () => {
+  assert.strictEqual(processTagValue('simple text'), 'simple text');
+  assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
+  assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
+  assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
+  console.log('processTagValue test passed');
+};
 
-    it('should process object values with text property correctly', () => {
-      const result = processTagValue({ text: 'Hello, World!' });
-      assert.strictEqual(result, 'Hello, World!');
-    });
+// Test replacePlaceholder
+const testReplacePlaceholder = () => {
+  const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
+  assert(updatedContent.includes('<w:t>123c</w:t>'));
+  assert(updatedContent.includes('<w:t>kashish</w:t>'));
+  assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
+  console.log('replacePlaceholder test passed');
+};
 
-    it('should return primitive values as is', () => {
-      const result = processTagValue('Just a string');
-      assert.strictEqual(result, 'Just a string');
-    });
-  });
+// Run tests
+testReadZipFile();
+testWriteZipFile();
+testProcessTagValue();
+testReplacePlaceholder();
 
-  describe('replacePlaceholder', () => {
-    it('should replace placeholders in the document content', () => {
-      const documentContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>Initial content</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      const jsonContent = { 'Incident Number': '5678' };
+console.log('All tests passed');
 
-      const result = replacePlaceholder(documentContent, jsonContent);
-      assert.strictEqual(result.includes('<w:t>5678</w:t>'), true);
-    });
-  });
 
-  describe('processDocument', () => {
-    it('should create a new document with replaced placeholders', async () => {
-      const jsonContent = { 'Incident Number': '5678' };
-      const templateFilePath = './Test Document.docx'; // Adjust this path to your template file
-      const fileName = 'word/document.xml'; // Adjust this path to match document.xml in your template
 
-      // Create a template Word document with a placeholder
-      const zip = new AdmZip();
-      const xmlContent = `
-        <w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:sdtPr>
-            <w:tag w:val="Incident Number"/>
-          </w:sdtPr>
-          <w:sdtContent>
-            <w:tc>
-              <w:p>
-                <w:r>
-                  <w:t>Initial content</w:t>
-                </w:r>
-              </w:p>
-            </w:tc>
-          </w:sdtContent>
-        </w:sdt>
-      `;
-      zip.addFile('word/document.xml', Buffer.from(xmlContent, 'utf8'));
-      zip.writeZip(templateFilePath);
+Z:\Desktop\work-addin>npx mocha posttest.js
+readZipFile test passed
+writeZipFile test passed
+processTagValue test passed
+[2024-07-01T04:17:10.835Z] Entering replacePlaceholder
+[2024-07-01T04:17:10.842Z] Processing tag: Incident num
+[2024-07-01T04:17:10.843Z] Processing tag: authors
+[2024-07-01T04:17:10.844Z] Processing tag: date
+[2024-07-01T04:17:10.845Z] Exiting replacePlaceholder
+replacePlaceholder test passed
+All tests passed
 
-      // Test processDocument function
-      const newFileName = await processDocument(jsonContent);
-      const updatedContent = readZipFile(newFileName, fileName);
-      assert.strictEqual(updatedContent.includes('<w:t>5678</w:t>'), true);
 
-      // Clean up test files
-      fs.unlinkSync(templateFilePath);
-      fs.unlinkSync(newFileName);
-    });
-  });
-
-});
+  0 passing (0ms)
