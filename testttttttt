@@ -1,1104 +1,172 @@
-                        "w:tc": [
-                          {
-                            "w:tcPr": [
-                              {
-                                "w:tcW": [
-                                  {
-                                    "$": {
-                                      "w:w": "3505",
-                                      "w:type": "dxa"
-                                    }
-                                  }
-                                ]
-                              }
-                            ],
-                            "w:p": [
-                              {
-                                "$": {
-                                  "w14:paraId": "582AF1F7",
-                                  "w14:textId": "7DD25AB0",
-                                  "w:rsidR": "004F4633",
-                                  "w:rsidRDefault": "004F4633",
-                                  "w:rsidP": "004F4633"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      {
-                                        "_": "Action ",
-                                        "$": {
-                                          "xml:space": "preserve"
-                                        }
-                                      }
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "$": {
-                                  "w14:paraId": "4CD850D4",
-                                  "w14:textId": "651F537A",
-                                  "w:rsidR": "002E256C",
-                                  "w:rsidRPr": "00C569AD",
-                                  "w:rsidRDefault": "004F4633",
-                                  "w:rsidP": "00CC2C3E"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      "Item"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          },
-                          {
-                            "w:tcPr": [
-                              {
-                                "w:tcW": [
-                                  {
-                                    "$": {
-                                      "w:w": "1350",
-                                      "w:type": "dxa"
-                                    }
-                                  }
-                                ]
-                              }
-                            ],
-                            "w:p": [
-                              {
-                                "$": {
-                                  "w14:paraId": "21A1A903",
-                                  "w14:textId": "77777777",
-                                  "w:rsidR": "002E256C",
-                                  "w:rsidRPr": "00C569AD",
-                                  "w:rsidRDefault": "002E256C",
-                                  "w:rsidP": "00CC2C3E"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      "Type"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          },
-                          {
-                            "w:tcPr": [
-                              {
-                                "w:tcW": [
-                                  {
-                                    "$": {
-                                      "w:w": "1080",
-                                      "w:type": "dxa"
-                                    }
-                                  }
-                                ]
-                              }
-                            ],
-                            "w:p": [
-                              {
-                                "$": {
-                                  "w14:paraId": "51DDA351",
-                                  "w14:textId": "77777777",
-                                  "w:rsidR": "002E256C",
-                                  "w:rsidRPr": "00C569AD",
-                                  "w:rsidRDefault": "002E256C",
-                                  "w:rsidP": "00CC2C3E"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      "Priority"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          },
-                          {
-                            "w:tcPr": [
-                              {
-                                "w:tcW": [
-                                  {
-                                    "$": {
-                                      "w:w": "1170",
-                                      "w:type": "dxa"
-                                    }
-                                  }
-                                ]
-                              }
-                            ],
-                            "w:p": [
-                              {
-                                "$": {
-                                  "w14:paraId": "3ECF425A",
-                                  "w14:textId": "77777777",
-                                  "w:rsidR": "002E256C",
-                                  "w:rsidRPr": "00C569AD",
-                                  "w:rsidRDefault": "002E256C",
-                                  "w:rsidP": "00CC2C3E"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      "Owner"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          },
-                          {
-                            "w:tcPr": [
-                              {
-                                "w:tcW": [
-                                  {
-                                    "$": {
-                                      "w:w": "1080",
-                                      "w:type": "dxa"
-                                    }
-                                  }
-                                ]
-                              }
-                            ],
-                            "w:p": [
-                              {
-                                "$": {
-                                  "w14:paraId": "30314E10",
-                                  "w14:textId": "77777777",
-                                  "w:rsidR": "002E256C",
-                                  "w:rsidRPr": "00C569AD",
-                                  "w:rsidRDefault": "002E256C",
-                                  "w:rsidP": "00CC2C3E"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      "Issue"
-                                    ]
-                                  },
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      {
-                                        "$": {
-                                          "xml:space": "preserve"
-                                        }
-                                      }
-                                    ]
-                                  },
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      "Ticket"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          },
-                          {
-                            "w:tcPr": [
-                              {
-                                "w:tcW": [
-                                  {
-                                    "$": {
-                                      "w:w": "1165",
-                                      "w:type": "dxa"
-                                    }
-                                  }
-                                ]
-                              }
-                            ],
-                            "w:p": [
-                              {
-                                "$": {
-                                  "w14:paraId": "6E8C8DB5",
-                                  "w14:textId": "77777777",
-                                  "w:rsidR": "002E256C",
-                                  "w:rsidRPr": "00C569AD",
-                                  "w:rsidRDefault": "002E256C",
-                                  "w:rsidP": "00CC2C3E"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:ascii": "Segoe UI",
-                                              "w:hAnsi": "Segoe UI",
-                                              "w:cs": "Segoe UI"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ]
-                                      }
-                                    ],
-                                    "w:t": [
-                                      "Status"
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "$": {
-                          "w:rsidR": "002E256C",
-                          "w14:paraId": "3C51A3E2",
-                          "w14:textId": "77777777",
-                          "w:rsidTr": "00CC2C3E"
-                        },
-                        "w:trPr": [
-                          {
-                            "w:trHeight": [
-                              {
-                                "$": {
-                                  "w:val": "872"
-                                }
-                              }
-                            ]
-                          }
-                        ],
-                        "w:sdt": [
-                          {
-                            "w:sdtPr": [
-                              {
-                                "w:rPr": [
-                                  {
-                                    "w:rFonts": [
-                                      {
-                                        "$": {
-                                          "w:cstheme": "minorHAnsi"
-                                        }
-                                      }
-                                    ],
-                                    "w:b": [
-                                      ""
-                                    ],
-                                    "w:bCs": [
-                                      ""
-                                    ],
-                                    "w:sz": [
-                                      {
-                                        "$": {
-                                          "w:val": "28"
-                                        }
-                                      }
-                                    ],
-                                    "w:szCs": [
-                                      {
-                                        "$": {
-                                          "w:val": "28"
-                                        }
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:tag": [
-                                  {
-                                    "$": {
-                                      "w:val": "IAI1"
-                                    }
-                                  }
-                                ],
-                                "w:id": [
-                                  {
-                                    "$": {
-                                      "w:val": "1822164267"
-                                    }
-                                  }
-                                ],
-                                "w:lock": [
-                                  {
-                                    "$": {
-                                      "w:val": "sdtLocked"
-                                    }
-                                  }
-                                ],
-                                "w:placeholder": [
-                                  {
-                                    "w:docPart": [
-                                      {
-                                        "$": {
-                                          "w:val": "7382791DC95442909C37DD81606ADA6E"
-                                        }
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:text": [
-                                  ""
-                                ]
-                              }
-                            ],
-                            "w:sdtContent": [
-                              {
-                                "w:tc": [
-                                  {
-                                    "w:tcPr": [
-                                      {
-                                        "w:tcW": [
-                                          {
-                                            "$": {
-                                              "w:w": "3505",
-                                              "w:type": "dxa"
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    ],
-                                    "w:p": [
-                                      {
-                                        "$": {
-                                          "w14:paraId": "2E237F96",
-                                          "w14:textId": "77777777",
-                                          "w:rsidR": "002E256C",
-                                          "w:rsidRDefault": "002E256C",
-                                          "w:rsidP": "00CC2C3E"
-                                        },
-                                        "w:pPr": [
-                                          {
-                                            "w:rPr": [
-                                              {
-                                                "w:rFonts": [
-                                                  {
-                                                    "$": {
-                                                      "w:cstheme": "minorHAnsi"
-                                                    }
-                                                  }
-                                                ],
-                                                "w:b": [
-                                                  ""
-                                                ],
-                                                "w:bCs": [
-                                                  ""
-                                                ],
-                                                "w:sz": [
-                                                  {
-                                                    "$": {
-                                                      "w:val": "40"
-                                                    }
-                                                  }
-                                                ],
-                                                "w:szCs": [
-                                                  {
-                                                    "$": {
-                                                      "w:val": "40"
-                                                    }
-                                                  }
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ],
-                                        "w:r": [
-                                          {
-                                            "$": {
-                                              "w:rsidRPr": "00B344C2"
-                                            },
-                                            "w:rPr": [
-                                              {
-                                                "w:rFonts": [
-                                                  {
-                                                    "$": {
-                                                      "w:cstheme": "minorHAnsi"
-                                                    }
-                                                  }
-                                                ],
-                                                "w:b": [
-                                                  ""
-                                                ],
-                                                "w:bCs": [
-                                                  ""
-                                                ],
-                                                "w:sz": [
-                                                  {
-                                                    "$": {
-                                                      "w:val": "28"
-                                                    }
-                                                  }
-                                                ],
-                                                "w:szCs": [
-                                                  {
-                                                    "$": {
-                                                      "w:val": "28"
-                                                    }
-                                                  }
-                                                ]
-                                              }
-                                            ],
-                                            "w:t": [
-                                              "Inc Action Item 1"
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ],
-                        "w:tc": [
-                          {
-                            "w:tcPr": [
-                              {
-                                "w:tcW": [
-                                  {
-                                    "$": {
-                                      "w:w": "1350",
-                                      "w:type": "dxa"
-                                    }
-                                  }
-                                ]
-                              }
-                            ],
-                            "w:p": [
-                              {
-                                "$": {
-                                  "w14:paraId": "22E26A5F",
-                                  "w14:textId": "77777777",
-                                  "w:rsidR": "002E256C",
-                                  "w:rsidRPr": "0064434D",
-                                  "w:rsidRDefault": "002E256C",
-                                  "w:rsidP": "00CC2C3E"
-                                },
-                                "w:pPr": [
-                                  {
-                                    "w:jc": [
-                                      {
-                                        "$": {
-                                          "w:val": "right"
-                                        }
-                                      }
-                                    ],
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:cstheme": "minorHAnsi"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ],
-                                        "w:sz": [
-                                          {
-                                            "$": {
-                                              "w:val": "20"
-                                            }
-                                          }
-                                        ],
-                                        "w:szCs": [
-                                          {
-                                            "$": {
-                                              "w:val": "20"
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ],
-                                "w:r": [
-                                  {
-                                    "$": {
-                                      "w:rsidRPr": "00C569AD"
-                                    },
-                                    "w:rPr": [
-                                      {
-                                        "w:rFonts": [
-                                          {
-                                            "$": {
-                                              "w:cstheme": "minorHAnsi"
-                                            }
-                                          }
-                                        ],
-                                        "w:b": [
-                                          ""
-                                        ],
-                                        "w:bCs": [
-                                          ""
-                                        ],
-                                        "w:noProof": [
-                                          ""
-                                        ],
-                                        "w:sz": [
-                                          {
-                                            "$": {
-                                              "w:val": "40"
-                                            }
-                                          }
-                                        ],
-                                        "w:szCs": [
-                                          {
-                                            "$": {
-                                              "w:val": "40"
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    ],
-                                    "mc:AlternateContent": [
-                                      {
-                                        "mc:Choice": [
-                                          {
-                                            "$": {
-                                              "Requires": "wps"
-                                            },
-                                            "w:drawing": [
-                                              {
-                                                "wp:anchor": [
-                                                  {
-                                                    "$": {
-                                                      "distT": "91440",
-                                                      "distB": "91440",
-                                                      "distL": "137160",
-                                                      "distR": "137160",
-                                                      "simplePos": "0",
-                                                      "relativeHeight": "251680768",
-                                                      "behindDoc": "0",
-                                                      "locked": "0",
-                                                      "layoutInCell": "0",
-                                                      "allowOverlap": "1",
-                                                      "wp14:anchorId": "50EE6A8C",
-                                                      "wp14:editId": "657A5B6B"
-                                                    },
-                                                    "wp:simplePos": [
-                                                      {
-                                                        "$": {
-                                                          "x": "0",
-                                                          "y": "0"
-                                                        }
-                                                      }
-                                                    ],
-                                                    "wp:positionH": [
-                                                      {
-                                                        "$": {
-                                                          "relativeFrom": "margin"
-                                                        },
-                                                        "wp:posOffset": [
-                                                          "189230"
-                                                        ]
-                                                      }
-                                                    ],
-                                                    "wp:positionV": [
-                                                      {
-                                                        "$": {
-                                                          "relativeFrom": "margin"
-                                                        },
-                                                        "wp:posOffset": [
-                                                          "-65405"
-                                                        ]
-                                                      }
-                                                    ],
-                                                    "wp:extent": [
-                                                      {
-                                                        "$": {
-                                                          "cx": "377825",
-                                                          "cy": "619125"
-                                                        }
-                                                      }
-                                                    ],
-                                                    "wp:effectExtent": [
-                                                      {
-                                                        "$": {
-                                                          "l": "0",
-                                                          "t": "6350",
-                                                          "r": "15875",
-                                                          "b": "15875"
-                                                        }
-                                                      }
-                                                    ],
-                                                    "wp:wrapSquare": [
-                                                      {
-                                                        "$": {
-                                                          "wrapText": "bothSides"
-                                                        }
-                                                      }
-                                                    ],
-                                                    "wp:docPr": [
-                                                      {
-                                                        "$": {
-                                                          "id": "22",
-                                                          "name": "AutoShape 2"
-                                                        }
-                                                      }
-                                                    ],
-                                                    "wp:cNvGraphicFramePr": [
-                                                      {
-                                                        "a:graphicFrameLocks": [
-                                                          {
-                                                            "$": {
-                                                              "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main"
-                                                            }
-                                                          }
-                                                        ]
-                                                      }
-                                                    ],
-                                                    "a:graphic": [
-                                                      {
-                                                        "$": {
-                                                          "xmlns:a": "http://schemas.openxmlformats.org/drawingml/2006/main"
-                                                        },
-                                                        "a:graphicData": [
-                                                          {
-                                                            "$": {
-                                                              "uri": "http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
-                                                            },
-                                                            "wps:wsp": [
-                                                              {
-                                                                "wps:cNvSpPr": [
-                                                                  {
-                                                                    "a:spLocks": [
-                                                                      {
-                                                                        "$": {
-                                                                          "noChangeArrowheads": "1"
-                                                                        }
-                                                                      }
-                                                                    ]
-                                                                  }
-                                                                ],
-                                                                "wps:spPr": [
-                                                                  {
-                                                                    "$": {
-                                                                      "bwMode": "auto"
-                                                                    },
-                                                                    "a:xfrm": [
-                                                                      {
-                                                                        "$": {
-                                                                          "rot": "5400000"
-                                                                        },
-                                                                        "a:off": [
-                                                                          {
-                                                                            "$": {
-                                                                              "x": "0",
-                                                                              "y": "0"
-                                                                            }
-                                                                          }
-                                                                        ],
-                                                                        "a:ext": [
-                                                                          {
-                                                                            "$": {
-                                                                              "cx": "377825",
-                                                                              "cy": "619125"
-                                                                            }
-                                                                          }
-                                                                        ]
-                                                                      }
-                                                                    ],
-                                                                    "a:prstGeom": [
-                                                                      {
-                                                                        "$": {
-                                                                          "prst": "roundRect"
-                                                                        },
-                                                                        "a:avLst": [
-                                                                          {
-                                                                            "a:gd": [
-                                                                              {
-                                                                                "$": {
-                                                                                  "name": "adj",
-                                                                                  "fmla": "val 13032"
-                                                                                }
-                                                                              }
-                                                                            ]
-                                                                          }
-                                                                        ]
-                                                                      }
-                                                                    ],
-                                                                    "a:solidFill": [
-                                                                      {
-                                                                        "a:schemeClr": [
-                                                                          {
-                                                                            "$": {
-                                                                              "val": "accent1"
-                                                                            },
-                                                                            "a:lumMod": [
-                                                                              {
-                                                                                "$": {
-                                                                                  "val": "50000"
-                                                                                }
-                                                                              }
-                                                                            ]
-                                                                          }
-                                                                        ]
-                                                                      }
-                                                                    ]
-                                                                  }
-                                                                ],
-                                                                "wps:style": [
-                                                                  {
-                                                                    "a:lnRef": [
-                                                                      {
-                                                                        "$": {
-                                                                          "idx": "3"
-                                                                        },
-                                                                        "a:schemeClr": [
-                                                                          {
-                                                                            "$": {
-                                                                              "val": "lt1"
-                                                                            }
-                                                                          }
-                                                                        ]
-                                                                      }
-                                                                    ],
-                                                                    "a:fillRef": [
-                                                                      {
-                                                                        "$": {
-                                                                          "idx": "1"
-                                                                        },
+const fs = require('fs');
+const JSZip = require('jszip');
+const xml2js = require('xml2js');
+
+async function extractContentControlTags(fpath) {
+  try {
+    const documentXml = await readDocumentXml(fpath);
+    const tags = await parseDocumentXml(documentXml);
+    saveTagsToFile(tags, 'myoutputk.json');
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+async function readDocumentXml(fpath) {
+  const data = fs.readFileSync(fpath);
+  const zip = await JSZip.loadAsync(data);
+  const documentXml = await zip.file('word/document.xml').async('text');
+  return documentXml;
+}
+
+async function parseDocumentXml(documentXml) {
+  const parser = new xml2js.Parser();
+  return new Promise((resolve, reject) => {
+    parser.parseString(documentXml, (err, result) => {
+      if (err) {
+        return reject(err);
+      }
+      const tags = extractTagsFromBody(result['w:document']['w:body'][0]);
+      resolve(tags);
+    });
+  });
+}
+
+function extractTagsFromBody(body) {
+  const tags = {};
+
+  function traverseNodes(node) {
+    if (node['w:sdt']) {
+      node['w:sdt'].forEach(sdt => {
+        const tag = sdt['w:sdtPr'][0]['w:tag'];
+        if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
+          const tagName = tag[0]['$']['w:val'];
+          const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
+          console.log(`Tag found: ${tagName} with value: ${JSON.stringify(tagValue)}`);
+          if (tags[tagName]) {
+            if (Array.isArray(tags[tagName])) {
+              tags[tagName].push(tagValue);
+            } else {
+              tags[tagName] = [tags[tagName], tagValue];
+            }
+          } else {
+            tags[tagName] = tagValue;
+          }
+        }
+      });
+    }
+    Object.values(node).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseNodes(child));
+      }
+    });
+  }
+
+  traverseNodes(body);
+
+  // Convert any single-value arrays to strings
+  Object.keys(tags).forEach(tagName => {
+    if (Array.isArray(tags[tagName]) && tags[tagName].length === 1) {
+      tags[tagName] = tags[tagName][0];
+    }
+  });
+
+  console.log('Tags after traversal:', JSON.stringify(tags, null, 2));
+  return tags;
+}
+
+function extractTagValue(content) {
+  let text = '';
+  let listItems = [];
+  let tableData = null;
+
+  function traverseContent(contentNode) {
+    if (contentNode['w:tbl']) {
+      tableData = extractTableFromNode(contentNode['w:tbl'][0]);
+    } else if (contentNode['w:p']) {
+      contentNode['w:p'].forEach(pNode => {
+        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
+          // Detect a numbered list item
+          const listItem = extractTextFromNode(pNode);
+          if (typeof listItem === 'string' && listItem.trim() !== '') {
+            listItems.push(listItem);
+          } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
+            listItems.push(listItem);
+          }
+        } else {
+          // Regular text node
+          const pText = extractTextFromNode(pNode);
+          if (typeof pText === 'string' && pText.trim() !== '') {
+            text += pText;
+          } else if (typeof pText === 'object' && pText.text.trim() !== '') {
+            text += pText.text;
+          }
+        }
+      });
+    }
+    Object.values(contentNode).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseContent(child));
+      }
+    });
+  }
+
+  function extractTextFromNode(node) {
+    let nodeText = '';
+    let highlighted = false;
+
+    if (node['w:r']) {
+      node['w:r'].forEach(rNode => {
+        if (rNode['w:rPr'] && rNode['w:rPr'][0]['w:highlight']) {
+          highlighted = true;
+        }
+        if (rNode['w:t']) {
+          rNode['w:t'].forEach(textNode => {
+            if (typeof textNode === 'string') {
+              nodeText += textNode;
+            } else if (textNode['_']) {
+              nodeText += textNode['_'];
+            }
+          });
+        }
+      });
+    }
+
+    if (highlighted) {
+      return { text: nodeText, highlighted: true };
+    }
+    return nodeText;
+  }
+
+  function extractTableFromNode(tblNode) {
+    const rows = [];
+    tblNode['w:tr'].forEach(trNode => {
+      const cells = [];
+      trNode['w:tc'].forEach(tcNode => {
+        const cellText = extractTextFromNode(tcNode);
+        cells.push(cellText);
+      });
+      rows.push(cells);
+    });
+    return rows;
+  }
+
+  traverseContent(content);
+
+  if (tableData) {
+    return tableData;
+  } else if (listItems.length > 0) {
+    // Return list items as an array of strings or objects
+    return listItems;
+  } else {
+    return text;
+  }
+}
+
+function saveTagsToFile(tags, outputPath) {
+  const jsonFile = JSON.stringify(tags, null, 2);
+  fs.writeFileSync(outputPath, jsonFile);
+}
+
+const fpath = './testttt.docx';
+extractContentControlTags(fpath);
