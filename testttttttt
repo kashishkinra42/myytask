@@ -49,7 +49,7 @@ function extractTagsFromBody(body) {
               tags[tagName] = [tags[tagName], tagValue];
             }
           } else {
-            tags[tagName] = tagValue;
+            tags[tagName] = [tagValue];
           }
         }
       });
