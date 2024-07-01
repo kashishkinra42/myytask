@@ -91,10 +91,19 @@ describe('Document Processing Functions', function() {
     fs.unlinkSync(zipFilePath); // Clean up
   });
 
-  it('should process array values correctly', function() {
+  it('should process simple text values correctly', function() {
     assert.strictEqual(processTagValue('simple text'), 'simple text');
+  });
+
+  it('should process text object values correctly', function() {
     assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
+  });
+
+  it('should process array of items correctly', function() {
     assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
+  });
+
+  it('should process array of objects correctly', function() {
     assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
   });
 
@@ -105,17 +114,40 @@ describe('Document Processing Functions', function() {
     assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
   });
 
+  it('should handle empty input gracefully', function() {
+    const updatedContent = replacePlaceholder('', {});
+    assert.strictEqual(updatedContent, '');
+
+    const emptyJson = {};
+    const emptyDoc = '<w:document></w:document>';
+    const updatedEmpty = replacePlaceholder(emptyDoc, emptyJson);
+    assert.strictEqual(updatedEmpty, '<w:document></w:document>');
+  });
+
+  it('should handle undefined input without errors', function() {
+    const updatedContent = replacePlaceholder(undefined, undefined);
+    assert.strictEqual(updatedContent, '');
+  });
+
+  it('should handle non-existent tags in the document', function() {
+    const mockContentNoTags = `
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:sdt>
+            <w:sdtPr>
+              <w:tag w:val="nonexistent_tag"/>
+            </w:sdtPr>
+            <w:sdtContent>
+              <w:r>
+                <w:t>Placeholder</w:t>
+              </w:r>
+            </w:sdtContent>
+          </w:sdt>
+        </w:body>
+      </w:document>`;
+
+    const updatedContent = replacePlaceholder(mockContentNoTags, jsonContent);
+    assert(updatedContent.includes('<w:t>Placeholder</w:t>')); // Placeholder should remain unchanged
+  });
+
 });
-
-Z:\Desktop\work-addin>npx mocha posttest.js
-
-
-  Document Processing Functions
-    √ should read the content of an existing file in a zip archive (48ms)
-    √ should throw an error if the file does not exist in the zip archive (46ms)
-    √ should update the content of a file in a zip archive (144ms)
-    √ should process array values correctly
-    √ should replace placeholders in the document content
-
-
-  5 passing (261ms)
