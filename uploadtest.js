@@ -1,250 +1,127 @@
-const assert = require('assert');
-const sinon = require('sinon');
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
-const proxyquire = require('proxyquire');
-const path = require('path');
+Z:\Desktop\work-addin>npx mocha uploadtest.js
 
-// Mock XML content for different scenarios
-const validXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="tag1"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:p>
-          <w:r>
-            <w:t>Hello, World!</w:t>
-          </w:r>
-        </w:p>
-      </w:sdtContent>
-    </w:sdt>
-  </w:body>
-</w:document>`;
 
-const emptyXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-  </w:body>
-</w:document>`;
+  Document Processing Functions
+    readFileContent
+      1) should read file content successfully
+      2) should handle file read errors
+    extractXmlFromZip
+      3) should extract XML content from zip successfully
+      4) should handle zip extraction errors
+    parseXml
+      5) should parse valid XML content successfully
+      6) should handle invalid XML content
+    extractTagValue
+      7) should extract tag value from content
+      8) should handle empty content
+    extractTagsFromBody
+      9) should extract tags from body content
+      10) should handle body with no tags
+    extractContentControlTags
+      √ should extract content control tags from the document
+      11) should handle empty XML content
+      12) should handle invalid XML content
 
-const invalidXmlContent = `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="tag1"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:p>
-          <w:r>
-            <w:t>Hello, World!
-          </w:r>
-        </w:p>
-      </w:sdtContent>
-    </w:sdt>
-  </w:body>
-</w:document>`;
 
-describe('Document Processing Functions', () => {
-  let readFileStub;
-  let jszipStub;
-  let parseStringPromiseStub;
+  1 passing (706ms)
+  12 failing
 
-  const mockDocxFilePath = path.join(__dirname, 'mock_document.docx');
-  const mockDocxFile = fs.readFileSync(mockDocxFilePath); // Read the binary content of the DOCX file
+  1) Document Processing Functions
+       readFileContent
+         should read file content successfully:
+     TypeError: this.functions.readFileContent is not a function
+      at Context.<anonymous> (uploadtest.js:124:44)
+      at process.processImmediate (node:internal/timers:478:21)
 
-  beforeEach(() => {
-    // Mock fs.promises.readFile
-    readFileStub = sinon.stub(fs.promises, 'readFile').resolves(mockDocxFile);
+  2) Document Processing Functions
+       readFileContent
+         should handle file read errors:
+     TypeError: this.functions.readFileContent is not a function
+      at Context.<anonymous> (uploadtest.js:131:43)
+      at process.processImmediate (node:internal/timers:478:21)
 
-    // Mock JSZip.loadAsync and .file().async()
-    jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
-      file: sinon.stub().returns({
-        async: sinon.stub().resolves(validXmlContent),
-      }),
-    });
+  3) Document Processing Functions
+       extractXmlFromZip
+         should extract XML content from zip successfully:
+     TypeError: this.functions.extractXmlFromZip is not a function
+      at Context.<anonymous> (uploadtest.js:137:47)
+      at process.processImmediate (node:internal/timers:478:21)
 
-    // Mock xml2js.Parser().parseStringPromise
-    parseStringPromiseStub = sinon.stub().resolves({
-      'w:document': {
-        'w:body': [
-          {
-            'w:sdt': [
-              {
-                'w:sdtPr': [
-                  {
-                    'w:tag': [
-                      {
-                        $: { 'w:val': 'tag1' },
-                      },
-                    ],
-                  },
-                ],
-                'w:sdtContent': [
-                  {
-                    'w:p': [
-                      {
-                        'w:r': [
-                          {
-                            'w:t': ['Hello, World!'],
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    });
+  4) Document Processing Functions
+       extractXmlFromZip
+         should handle zip extraction errors:
+     TypeError: this.functions.extractXmlFromZip is not a function
+      at Context.<anonymous> (uploadtest.js:143:43)
+      at process.processImmediate (node:internal/timers:478:21)
 
-    // Use proxyquire to inject mocks
-    this.functions = proxyquire('../path_to_your_module', {
-      fs,
-      jszip: JSZip,
-      xml2js: {
-        Parser: function () {
-          return { parseStringPromise: parseStringPromiseStub };
-        },
-      },
-    });
-  });
+  5) Document Processing Functions
+       parseXml
+         should parse valid XML content successfully:
+     TypeError: this.functions.parseXml is not a function
+      at Context.<anonymous> (uploadtest.js:149:46)
+      at process.processImmediate (node:internal/timers:478:21)
 
-  afterEach(() => {
-    sinon.restore();
-  });
+  6) Document Processing Functions
+       parseXml
+         should handle invalid XML content:
+     TypeError: this.functions.parseXml is not a function
+      at Context.<anonymous> (uploadtest.js:156:43)
+      at process.processImmediate (node:internal/timers:478:21)
 
-  describe('readFileContent', () => {
-    it('should read file content successfully', async () => {
-      const content = await this.functions.readFileContent(mockDocxFilePath);
-      assert(content);
-      assert(readFileStub.calledWith(mockDocxFilePath));
-    });
+  7) Document Processing Functions
+       extractTagValue
+         should extract tag value from content:
+     TypeError: this.functions.extractTagValue is not a function
+      at Context.<anonymous> (uploadtest.js:173:37)
+      at process.processImmediate (node:internal/timers:478:21)
 
-    it('should handle file read errors', async () => {
-      readFileStub.rejects(new Error('File not found'));
-      await assert.rejects(this.functions.readFileContent('invalid_path.docx'), /File not found/);
-    });
-  });
+  8) Document Processing Functions
+       extractTagValue
+         should handle empty content:
+     TypeError: this.functions.extractTagValue is not a function
+      at Context.<anonymous> (uploadtest.js:179:37)
+      at process.processImmediate (node:internal/timers:478:21)
 
-  describe('extractXmlFromZip', () => {
-    it('should extract XML content from zip successfully', async () => {
-      const xmlContent = await this.functions.extractXmlFromZip(mockDocxFile);
-      assert.strictEqual(xmlContent, validXmlContent);
-    });
+  9) Document Processing Functions
+       extractTagsFromBody
+         should extract tags from body content:
+     TypeError: this.functions.extractTagsFromBody is not a function
+      at Context.<anonymous> (uploadtest.js:214:35)
+      at process.processImmediate (node:internal/timers:478:21)
 
-    it('should handle zip extraction errors', async () => {
-      jszipStub.rejects(new Error('Invalid zip file'));
-      await assert.rejects(this.functions.extractXmlFromZip(mockDocxFile), /Invalid zip file/);
-    });
-  });
+  10) Document Processing Functions
+       extractTagsFromBody
+         should handle body with no tags:
+     TypeError: this.functions.extractTagsFromBody is not a function
+      at Context.<anonymous> (uploadtest.js:220:35)
+      at process.processImmediate (node:internal/timers:478:21)
 
-  describe('parseXml', () => {
-    it('should parse valid XML content successfully', async () => {
-      const parsedXml = await this.functions.parseXml(validXmlContent);
-      assert(parsedXml);
-      assert(parseStringPromiseStub.calledWith(validXmlContent));
-    });
+  11) Document Processing Functions
+       extractContentControlTags
+         should handle empty XML content:
 
-    it('should handle invalid XML content', async () => {
-      parseStringPromiseStub.rejects(new Error('Invalid XML'));
-      await assert.rejects(this.functions.parseXml(invalidXmlContent), /Invalid XML/);
-    });
-  });
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
 
-  describe('extractTagValue', () => {
-    it('should extract tag value from content', () => {
-      const content = {
-        'w:p': [
-          {
-            'w:r': [
-              {
-                'w:t': ['Hello, World!'],
-              },
-            ],
-          },
-        ],
-      };
-      const result = this.functions.extractTagValue(content);
-      assert.strictEqual(result, 'Hello, World!');
-    });
++ {
++   tag1: 'Hello, World!'
++ }
+- {}
+      + expected - actual
 
-    it('should handle empty content', () => {
-      const content = {};
-      const result = this.functions.extractTagValue(content);
-      assert.strictEqual(result, '');
-    });
-  });
+      -{
+      -  "tag1": "Hello, World!"
+      -}
+      +{}
 
-  describe('extractTagsFromBody', () => {
-    it('should extract tags from body content', () => {
-      const bodyContent = {
-        'w:sdt': [
-          {
-            'w:sdtPr': [
-              {
-                'w:tag': [
-                  {
-                    $: { 'w:val': 'tag1' },
-                  },
-                ],
-              },
-            ],
-            'w:sdtContent': [
-              {
-                'w:p': [
-                  {
-                    'w:r': [
-                      {
-                        'w:t': ['Hello, World!'],
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      };
-      const tags = this.functions.extractTagsFromBody(bodyContent);
-      assert.deepStrictEqual(tags, { tag1: 'Hello, World!' });
-    });
+      at Context.<anonymous> (uploadtest.js:240:14)
 
-    it('should handle body with no tags', () => {
-      const bodyContent = {};
-      const tags = this.functions.extractTagsFromBody(bodyContent);
-      assert.deepStrictEqual(tags, {});
-    });
-  });
+  12) Document Processing Functions
+       extractContentControlTags
+         should handle invalid XML content:
+     TypeError: parseStringPromiseStub.restore is not a function
+      at Context.<anonymous> (uploadtest.js:244:30)
+      at process.processImmediate (node:internal/timers:478:21)
 
-  describe('extractContentControlTags', () => {
-    it('should extract content control tags from the document', async () => {
-      const result = await this.functions.extractContentControlTags(mockDocxFilePath);
-      assert.deepStrictEqual(result, { tag1: 'Hello, World!' });
-    });
 
-    it('should handle empty XML content', async () => {
-      jszipStub.restore();
-      jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
-        file: sinon.stub().returns({
-          async: sinon.stub().resolves(emptyXmlContent),
-        }),
-      });
 
-      const result = await this.functions.extractContentControlTags(mockDocxFilePath);
-      assert.deepStrictEqual(result, {});
-    });
-
-    it('should handle invalid XML content', async () => {
-      parseStringPromiseStub.restore();
-      parseStringPromiseStub = sinon.stub().rejects(new Error('Invalid XML'));
-
-      await assert.rejects(this.functions.extractContentControlTags(mockDocxFilePath), /Invalid XML/);
-    });
-  });
-});
