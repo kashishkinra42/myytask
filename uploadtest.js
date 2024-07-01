@@ -1,117 +1,25 @@
-const assert = require('assert');
-const sinon = require('sinon');
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
-const proxyquire = require('proxyquire');
+Z:\Desktop\work-addin>npx mocha uploadtest.js
 
-describe('extractContentControlTags', () => {
-  let readFileStub;
-  let jszipStub;
-  let parseStringPromiseStub;
 
-  const mockDocxFile = Buffer.from('mock docx file content'); // Mock binary content of a .docx file
-  const mockXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-  <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-    <w:body>
-      <w:sdt>
-        <w:sdtPr>
-          <w:tag w:val="tag1"/>
-        </w:sdtPr>
-        <w:sdtContent>
-          <w:p>
-            <w:r>
-              <w:t>Hello, World!</w:t>
-            </w:r>
-          </w:p>
-        </w:sdtContent>
-      </w:sdt>
-    </w:body>
-  </w:document>`;
+  extractContentControlTags
+    √ should extract content control tags from the document
+Error: Error: File not found
+    at Context.<anonymous> (Z:\Desktop\work-addin\uploadtest.js:110:26)
+    at callFn (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:366:21)
+    at Runnable.run (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:354:5)
+    at Runner.runTest (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:677:10)
+    at Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:800:12
+    at next (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:592:14)
+    at Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:602:7
+    at next (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:485:14)
+    at cbHookRun (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:550:7)
+    at done (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:310:5)
+    at callFn (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:389:7)
+    at Runnable.run (Z:\Desktop\work-addin\node_modules\mocha\lib\runnable.js:354:5)
+    at next (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:509:10)
+    at Immediate.<anonymous> (Z:\Desktop\work-addin\node_modules\mocha\lib\runner.js:570:5)
+    at process.processImmediate (node:internal/timers:478:21)
+    √ should handle errors gracefully
 
-  beforeEach(() => {
-    // Mock fs.promises.readFile
-    readFileStub = sinon.stub(fs.promises, 'readFile').resolves(mockDocxFile);
 
-    // Mock JSZip.loadAsync and .file().async()
-    jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
-      file: sinon.stub().returns({
-        async: sinon.stub().resolves(mockXmlContent),
-      }),
-    });
-
-    // Mock xml2js.Parser().parseStringPromise
-    parseStringPromiseStub = sinon.stub().resolves({
-      'w:document': {
-        'w:body': [
-          {
-            'w:sdt': [
-              {
-                'w:sdtPr': [
-                  {
-                    'w:tag': [
-                      {
-                        $: { 'w:val': 'tag1' },
-                      },
-                    ],
-                  },
-                ],
-                'w:sdtContent': [
-                  {
-                    'w:p': [
-                      {
-                        'w:r': [
-                          {
-                            'w:t': ['Hello, World!'],
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-    // Use proxyquire to inject mocks
-    const { extractContentControlTags } = proxyquire('./path_to_your_module', {
-      fs,
-      jszip: JSZip,
-      xml2js: {
-        Parser: function () {
-          return { parseStringPromise: parseStringPromiseStub };
-        },
-      },
-    });
-
-    this.extractContentControlTags = extractContentControlTags;
-  });
-
-  afterEach(() => {
-    sinon.restore();
-  });
-
-  it('should extract content control tags from the document', async () => {
-    const result = await this.extractContentControlTags('path_to_mock_file.docx');
-
-    assert.deepEqual(result, {
-      tag1: 'Hello, World!',
-    });
-
-    assert(readFileStub.calledWith('path_to_mock_file.docx'));
-    assert(jszipStub.calledWith(mockDocxFile));
-    assert(parseStringPromiseStub.calledWith(mockXmlContent));
-  });
-
-  it('should handle errors gracefully', async () => {
-    readFileStub.rejects(new Error('File not found'));
-
-    await assert.rejects(async () => {
-      await this.extractContentControlTags('invalid_path.docx');
-    }, new Error('File not found'));
-  });
-});
-
+  2 passing (127ms)
