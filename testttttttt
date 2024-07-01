@@ -1,8 +1,11 @@
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
 const assert = require('assert');
-const { processTagValue, replacePlaceholder } = require('./PostData'); // replace with actual path
+
+const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData'); // replace with actual path
 
 // Mock data
 const jsonContent = {
@@ -56,8 +59,10 @@ describe('Document Processing Functions', function() {
     const zipFilePath = `./${uuidv4()}.zip`;
     zip.writeZip(zipFilePath);
 
-    const content = 'Test content'; // Replace with readZipFile logic
+    const content = readZipFile(zipFilePath, fileName);
     assert.strictEqual(content, 'Test content');
+
+    fs.unlinkSync(zipFilePath); // Clean up
   });
 
   it('should throw an error if the file does not exist in the zip archive', function() {
@@ -66,9 +71,10 @@ describe('Document Processing Functions', function() {
     zip.writeZip(zipFilePath);
 
     assert.throws(() => {
-      // Replace with readZipFile logic that throws an error
-      throw new Error('Entry not found');
+      readZipFile(zipFilePath, 'nonexistent.txt');
     }, /Entry not found/);
+
+    fs.unlinkSync(zipFilePath); // Clean up
   });
 
   it('should update the content of a file in a zip archive', function() {
@@ -78,10 +84,11 @@ describe('Document Processing Functions', function() {
     const zipFilePath = `./${uuidv4()}.zip`;
     zip.writeZip(zipFilePath);
 
-    // Replace with writeZipFile logic
-    // writeZipFile(zipFilePath, fileName, 'New content');
-    const content = 'New content'; // Replace with readZipFile logic
+    writeZipFile(zipFilePath, fileName, 'New content');
+    const content = readZipFile(zipFilePath, fileName);
     assert.strictEqual(content, 'New content');
+
+    fs.unlinkSync(zipFilePath); // Clean up
   });
 
   it('should process array values correctly', function() {
@@ -100,3 +107,15 @@ describe('Document Processing Functions', function() {
 
 });
 
+Z:\Desktop\work-addin>npx mocha posttest.js
+
+
+  Document Processing Functions
+    √ should read the content of an existing file in a zip archive (48ms)
+    √ should throw an error if the file does not exist in the zip archive (46ms)
+    √ should update the content of a file in a zip archive (144ms)
+    √ should process array values correctly
+    √ should replace placeholders in the document content
+
+
+  5 passing (261ms)
