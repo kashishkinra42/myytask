@@ -229,19 +229,29 @@ describe('Document Processing Functions', () => {
     });
 
     it('should handle empty XML content', async () => {
-      jszipStub.restore();
+      sinon.restore(); // Restore all stubs
       jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
         file: sinon.stub().returns({
           async: sinon.stub().resolves(emptyXmlContent),
         }),
       });
 
-      const result = await this.functions.extractContentControlTags(mockDocxFilePath);
+      const functions = proxyquire('./upload.js', {
+        fs,
+        jszip: JSZip,
+        xml2js: {
+          Parser: function () {
+            return { parseStringPromise: parseStringPromiseStub };
+          },
+        },
+      });
+
+      const result = await functions.extractContentControlTags(mockDocxFilePath);
       assert.deepStrictEqual(result, {});
     });
 
     it('should handle invalid XML content', async () => {
-      parseStringPromiseStub.restore();
+      sinon.restore(); // Restore all stubs
       parseStringPromiseStub = sinon.stub().rejects(new Error('Invalid XML'));
 
       const functions = proxyquire('./upload.js', {
