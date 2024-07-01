@@ -1,159 +1,74 @@
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { v4: uuidv4 } = require('uuid');
-const assert = require('assert');
-
-const { processDocument, readZipFile, writeZipFile, processTagValue, replacePlaceholder } = require('./PostData');
-
-// Mock data
-const jsonContent = {
-  "Incident num": "123c",
-  "authors": "kashish",
-  "date": "01/07/2024"
-};
-
-const mockDocumentContent = `
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="Incident num"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="authors"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-    <w:sdt>
-      <w:sdtPr>
-        <w:tag w:val="date"/>
-      </w:sdtPr>
-      <w:sdtContent>
-        <w:r>
-          <w:t>Placeholder</w:t>
-        </w:r>
-      </w:sdtContent>
-    </w:sdt>
-  </w:body>
-</w:document>`;
+<w:body>
+<w:sdt>
+<w:sdtPr>
+<w:tag w:val="Incident num"/>
+</w:sdtPr>
+<w:sdtContent>
+<w:r>
+<w:t>Placeholder</w:t>
+</w:r>
+</w:sdtContent>
+</w:sdt>
+<w:sdt>
+<w:sdtPr>
+<w:tag w:val="authors"/>
+</w:sdtPr>
+<w:sdtContent>
+<w:r>
+<w:t>Placeholder</w:t>
+</w:r>
+</w:sdtContent>
+</w:sdt>
+<w:sdt>
+<w:sdtPr>
+<w:tag w:val="date"/>
+</w:sdtPr>
+<w:sdtContent>
+<w:r>
+<w:t>Placeholder</w:t>
+</w:r>
+</w:sdtContent>
+</w:sdt>
+</w:body>
+</w:document>
 
-describe('Document Processing Functions', function() {
-  
-  it('should read the content of an existing file in a zip archive', function() {
-    const zip = new AdmZip();
-    const fileName = 'test.txt';
-    zip.addFile(fileName, Buffer.from('Test content', 'utf8'));
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
 
-    const content = readZipFile(zipFilePath, fileName);
-    assert.strictEqual(content, 'Test content');
-    console.log('readZipFile: Content read correctly.');
+Z:\Desktop\work-addin>npx mocha posttest.js
 
-    fs.unlinkSync(zipFilePath); // Clean up
-  });
 
-  it('should throw an error if the file does not exist in the zip archive', function() {
-    const zip = new AdmZip();
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
+  Document Processing Functions
+readZipFile: Content read correctly.
+    √ should read the content of an existing file in a zip archive (63ms)
+readZipFile: Correctly threw error for non-existent file.
+    √ should throw an error if the file does not exist in the zip archive (143ms)
+    1) should update the content of a file in a zip archive
+processTagValue: Processed simple text correctly.
+processTagValue: Processed text object correctly.
+processTagValue: Processed array values correctly.
+processTagValue: Processed array of text objects correctly.
+    √ should process array values correctly
+replacePlaceholder: Replaced Incident num correctly.
+replacePlaceholder: Replaced authors correctly.
+replacePlaceholder: Replaced date correctly.
+    √ should replace placeholders in the document content
+    2) should create a sample DOCX file with the updated content
 
-    assert.throws(() => {
-      readZipFile(zipFilePath, 'nonexistent.txt');
-    }, /Entry not found/);
-    console.log('readZipFile: Correctly threw error for non-existent file.');
 
-    fs.unlinkSync(zipFilePath); // Clean up
-  });
+  4 passing (350ms)
+  2 failing
 
-  it('should update the content of a file in a zip archive', function() {
-    const zip = new AdmZip();
-    const fileName = 'word/document.xml';
-    zip.addFile(fileName, Buffer.from(mockDocumentContent, 'utf8'));
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
+  1) Document Processing Functions
+       should update the content of a file in a zip archive:
+     Error: Entry not found: word/document.xml
+      at readZipFile (PostData.js:200:11)
+      at Context.<anonymous> (posttest.js:429:21)
+      at process.processImmediate (node:internal/timers:478:21)
 
-    const newContent = `
-    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-      <w:body>
-        <w:p>
-          <w:r>
-            <w:t>New content</w:t>
-          </w:r>
-        </w:p>
-      </w:body>
-    </w:document>`;
-
-    writeZipFile(zipFilePath, fileName, newContent);
-    const content = readZipFile(zipFilePath, fileName);
-    assert(content.includes('<w:t>New content</w:t>'));
-    console.log('writeZipFile: Content updated correctly.');
-
-    fs.unlinkSync(zipFilePath); // Clean up
-  });
-
-  it('should process array values correctly', function() {
-    assert.strictEqual(processTagValue('simple text'), 'simple text');
-    console.log('processTagValue: Processed simple text correctly.');
-
-    assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
-    console.log('processTagValue: Processed text object correctly.');
-
-    assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
-    console.log('processTagValue: Processed array values correctly.');
-
-    assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
-    console.log('processTagValue: Processed array of text objects correctly.');
-  });
-
-  it('should replace placeholders in the document content', function() {
-    const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
-    assert(updatedContent.includes('<w:t>123c</w:t>'));
-    console.log('replacePlaceholder: Replaced Incident num correctly.');
-
-    assert(updatedContent.includes('<w:t>kashish</w:t>'));
-    console.log('replacePlaceholder: Replaced authors correctly.');
-
-    assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
-    console.log('replacePlaceholder: Replaced date correctly.');
-  });
-
-  it('should create a sample DOCX file with the updated content', function() {
-    const zip = new AdmZip();
-    const fileName = 'word/document.xml';
-    zip.addFile(fileName, Buffer.from(mockDocumentContent, 'utf8'));
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
-
-    processDocument(zipFilePath, jsonContent);
-
-    const content = readZipFile(zipFilePath, fileName);
-    assert(content.includes('<w:t>123c</w:t>'));
-    console.log('processDocument: Replaced Incident num in the sample DOCX correctly.');
-
-    assert(content.includes('<w:t>kashish</w:t>'));
-    console.log('processDocument: Replaced authors in the sample DOCX correctly.');
-
-    assert(content.includes('<w:t>01/07/2024</w:t>'));
-    console.log('processDocument: Replaced date in the sample DOCX correctly.');
-
-    // Write the sample DOCX to disk
-    const outputPath = './sample.docx';
-    fs.writeFileSync(outputPath, zip.toBuffer());
-    console.log('Sample DOCX created at:', outputPath);
-
-    fs.unlinkSync(zipFilePath); // Clean up
-  });
-
-});
+  2) Document Processing Functions
+       should create a sample DOCX file with the updated content:
+     Error: Entry not found: word/document.xml
+      at readZipFile (PostData.js:200:11)
+      at processDocument (PostData.js:263:27)
+      at Context.<anonymous> (posttest.js:469:5)
+      at process.processImmediate (node:internal/timers:478:21)
