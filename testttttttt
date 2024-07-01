@@ -1,27 +1,139 @@
-function replacePlaceholder(documentContent, data) {
-  if (!documentContent) {
-    return '<w:document/>'; // Return empty document structure if no content
-  }
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
+const xpath = require('xpath');
 
-  const doc = new DOMParser().parseFromString(documentContent, 'application/xml');
-  const select = xpath.useNamespaces({ w: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main' });
+const log = (message) => {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+};
 
-  const placeholders = select('//w:sdt', doc);
-  placeholders.forEach((placeholder) => {
-    const tag = select('string(.//w:tag/@w:val)', placeholder);
-    if (data && data[tag]) {
-      const textNode = select('.//w:t', placeholder)[0];
-      if (textNode) {
-        textNode.textContent = processTagValue(data[tag]);
+const readZipFile = (zipFilePath, fileName) => {
+  const zip = new AdmZip(zipFilePath);
+  const zipEntry = zip.getEntry(fileName);
+  const content = zipEntry.getData().toString('utf8');
+  return content;
+};
+
+const writeZipFile = (zipFilePath, fileName, content) => {
+  const zip = new AdmZip(zipFilePath);
+  zip.updateFile(fileName, Buffer.from(content, 'utf8'));
+  zip.writeZip(zipFilePath);
+};
+
+const processTagValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => {
+      if (typeof item === 'string') {
+        return `${index + 1}. ${item}`;
+      } else if (typeof item === 'object' && item.text) {
+        return `${index + 1}. ${item.text}`;
       }
-    } else {
-      // Handle non-existent or undefined placeholders
-      const textNode = select('.//w:t', placeholder)[0];
-      if (textNode) {
-        textNode.textContent = '';
+      return '';
+    }).join('\n');
+  } else if (typeof value === 'object' && value.text) {
+    return value.text;
+  }
+  return value;
+};
+
+const replacePlaceholder = (documentContent, jsonContent) => {
+  log(`Entering replacePlaceholder`);
+  const doc = new DOMParser().parseFromString(documentContent, 'text/xml');
+  const select = xpath.useNamespaces({ "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main" });
+
+  select("//w:sdt", doc).forEach(node => {
+    const tagNode = select('.//w:tag/@w:val', node)[0];
+    if (tagNode) {
+      const tagName = tagNode.value;
+      log(`Processing tag: ${tagName}`);
+      if (jsonContent.hasOwnProperty(tagName)) {
+        const textNodes = select('.//w:t', node);
+        if (textNodes.length > 0) {
+          const processedValue = processTagValue(jsonContent[tagName]);
+          const parts = processedValue.split('\n');
+
+          // Clear existing text nodes
+          textNodes.forEach((textNode, index) => {
+            if (index === 0) {
+              textNode.textContent = parts[0];
+            } else {
+              textNode.parentNode.removeChild(textNode);
+            }
+          });
+
+          // Add new text nodes and line breaks
+          for (let i = 1; i < parts.length; i++) {
+            const breakNode = doc.createElement('w:br');
+            const newTextNode = doc.createElement('w:t');
+            newTextNode.textContent = parts[i];
+            textNodes[0].parentNode.appendChild(breakNode);
+            textNodes[0].parentNode.appendChild(newTextNode);
+          }
+        }
       }
     }
   });
 
-  return new XMLSerializer().serializeToString(doc);
-}
+  const serializer = new XMLSerializer();
+  const updatedContent = serializer.serializeToString(doc);
+  log(`Exiting replacePlaceholder`);
+  return updatedContent;
+};
+
+const processDocument = async (jsonContent) => {
+  const templateFilePath = './Test Document.docx';
+  const fileName = 'word/document.xml';
+
+  const newFileName = `./updated_${uuidv4()}.docx`;
+  fs.copyFileSync(templateFilePath, newFileName);
+
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
+
+  return newFileName;
+};
+
+module.exports = { processDocument };
+
+// module.exports = {
+//   processTagValue,
+//   readZipFile,
+//   writeZipFile,
+//   replacePlaceholder,
+//   processDocument
+// };
+
+app.post('/extract-tags', upload.single('Docxfile'), async (req, res) => {
+  if (!req.file) {
+    log(`No file received in the request`);
+    return res.status(400).send('No file uploaded');
+  }
+
+  log(`Received file for extraction: ${req.file.path}`);
+  const filePath = req.file.path;
+
+  try {
+    const tags = await extractContentControlTags(filePath);
+    res.status(200).json(tags);
+  } catch (error) {
+    console.error('Error extracting tags:', error);
+    res.status(500).send('Error extracting tags');
+  } finally {
+    fs.unlinkSync(filePath);
+  }
+});
+
+[2024-07-01T05:51:51.440Z] Received JSON: {"Incident Number":"1234","Date":"6/26/2024","Authors":"Kash kinra","Status":"Mitigated","Summary":"This is summary","Impact":"impactssss","Root Causes":"Rooottt causes","Trigger":"triggeredddd","Change(s) that triggered the incident":"changessss","Resolution":"res","Detection":"detect","Incident Theme":"s1","Link to the latest ORR":"linkkk","SLO Impact":"slooo","What Went Well":"everything","What Went Wrong":"Went wrong","Where We Got Lucky":["Kashish","Kinra","Hi","Hello","bye"],"F2":"1. Click or tap here to enter text."}
+Error processing document: Error: Entry not found: word/document.xml
+    at readZipFile (Z:\Desktop\work-addin\PostData.js:193:11)
+    at processDocument (Z:\Desktop\work-addin\PostData.js:242:27)
+    at Z:\Desktop\work-addin\app.js:22:35
+    at Layer.handle [as handle_request] (Z:\Desktop\work-addin\node_modules\express\lib\router\layer.js:95:5)
+    at next (Z:\Desktop\work-addin\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (Z:\Desktop\work-addin\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (Z:\Desktop\work-addin\node_modules\express\lib\router\layer.js:95:5)
+    at Z:\Desktop\work-addin\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (Z:\Desktop\work-addin\node_modules\express\lib\router\index.js:346:12)
+    at next (Z:\Desktop\work-addin\node_modules\express\lib\router\index.js:280:10)
