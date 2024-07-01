@@ -1,83 +1,3 @@
-
-const { get } = require('express/lib/response');
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
-
-async function extractContentControlTags(fpath) {
-  try {
-    const data = fs.readFileSync(fpath);
-    const zip = await JSZip.loadAsync(data);
-    const documentXml = await zip.file('word/document.xml').async('text');
-    const parser = new xml2js.Parser();
-
-    parser.parseString(documentXml, (err, result) => {
-      if (err) {
-        throw err;
-      }
-
-      const tags = {};
-      const body = result['w:document']['w:body'][0];
-
-      function traverseNodes(node) {
-        // console.log(node);
-        if (node['w:sdt']) {
-          node['w:sdt'].forEach(sdt => {
-            const tag = sdt['w:sdtPr'][0]['w:tag'];
-            if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
-              const tagName = tag[0]['$']['w:val'];
-              const tagValue = extractValueOftag(sdt['w:sdtContent'][0]);
-              if(tagValue.trim() !== ''){
-                tags[tagName] = tagValue;
-              }
-            }
-          });
-        }
-        Object.values(node).forEach(value => {
-          if (Array.isArray(value)) {
-            value.forEach(child => traverseNodes(child));
-          }
-        });
-      }
-
-      function extractValueOftag(content){
-        let text ="";
-        function traverseContent(contentNode){
-          if(contentNode['w:t']){
-            contentNode['w:t'].forEach(textNode => {
-              if(typeof textNode === 'string'){
-                text += textNode;
-              }else if(textNode['_']){
-                text += textNode['_'];
-              }
-            });
-          }
-
-          Object.values(contentNode).forEach(value => {
-            if (Array.isArray(value)) {
-              value.forEach(child => traverseContent(child));
-            }
-          });
-        }
-        traverseContent(content);
-        return text;
-      }
-      traverseNodes(body);
-
-      // console.log(tags);
-      const jsonFile = JSON.stringify(tags, null, 2);
-      fs.writeFileSync('myoutput.json', jsonFile);
-    });
-  }
-  catch (error) {
-    console.error('Error : ', error);
-  }
-}
-
-const fpath = './Test Document.docx';
-extractContentControlTags(fpath);
-
-========================
 const fs = require('fs');
 const JSZip = require('jszip');
 const xml2js = require('xml2js');
@@ -86,7 +6,7 @@ async function extractContentControlTags(fpath) {
   try {
     const documentXml = await readDocumentXml(fpath);
     const tags = await parseDocumentXml(documentXml);
-    saveTagsToFile(tags, 'myoutput.json');
+    saveTagsToFile(tags, 'myoutputk.json');
   } catch (error) {
     console.error('Error:', error);
   }
@@ -122,7 +42,9 @@ function extractTagsFromBody(body) {
         if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          if (tagValue.trim() !== '') {
+          if (typeof tagValue === 'string' && tagValue.trim() !== '') {
+            tags[tagName] = tagValue;
+          } else if (Array.isArray(tagValue) && tagValue.length > 0) {
             tags[tagName] = tagValue;
           }
         }
@@ -141,14 +63,27 @@ function extractTagsFromBody(body) {
 
 function extractTagValue(content) {
   let text = '';
+  let listItems = [];
 
   function traverseContent(contentNode) {
-    if (contentNode['w:t']) {
-      contentNode['w:t'].forEach(textNode => {
-        if (typeof textNode === 'string') {
-          text += textNode;
-        } else if (textNode['_']) {
-          text += textNode['_'];
+    if (contentNode['w:p']) {
+      contentNode['w:p'].forEach(pNode => {
+        if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
+          // Detect a numbered list item
+          const listItem = extractTextFromNode(pNode);
+          if (typeof listItem === 'string' && listItem.trim() !== '') {
+            listItems.push(listItem);
+          } else if (typeof listItem === 'object' && listItem.text.trim() !== '') {
+            listItems.push(listItem);
+          }
+        } else {
+          // Regular text node
+          const pText = extractTextFromNode(pNode);
+          if (typeof pText === 'string' && pText.trim() !== '') {
+            text += pText;
+          } else if (typeof pText === 'object' && pText.text.trim() !== '') {
+            text += pText.text;
+          }
         }
       });
     }
@@ -159,8 +94,41 @@ function extractTagValue(content) {
     });
   }
 
+  function extractTextFromNode(node) {
+    let nodeText = '';
+    let highlighted = false;
+
+    if (node['w:r']) {
+      node['w:r'].forEach(rNode => {
+        if (rNode['w:rPr'] && rNode['w:rPr'][0]['w:highlight']) {
+          highlighted = true;
+        }
+        if (rNode['w:t']) {
+          rNode['w:t'].forEach(textNode => {
+            if (typeof textNode === 'string') {
+              nodeText += textNode;
+            } else if (textNode['_']) {
+              nodeText += textNode['_'];
+            }
+          });
+        }
+      });
+    }
+
+    if (highlighted) {
+      return { text: nodeText, highlighted: true };
+    }
+    return nodeText;
+  }
+
   traverseContent(content);
-  return text;
+
+  if (listItems.length > 0) {
+    // Return list items as an array of strings or objects
+    return listItems;
+  } else {
+    return text;
+  }
 }
 
 function saveTagsToFile(tags, outputPath) {
@@ -168,5 +136,5 @@ function saveTagsToFile(tags, outputPath) {
   fs.writeFileSync(outputPath, jsonFile);
 }
 
-const fpath = './Test Document.docx';
+const fpath = './testttt.docx';
 extractContentControlTags(fpath);
