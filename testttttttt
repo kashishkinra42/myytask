@@ -50,78 +50,59 @@ const mockDocumentContent = `
   </w:body>
 </w:document>`;
 
-// Tests
+describe('Document Processing Functions', function() {
 
-// Test readZipFile
-const testReadZipFile = () => {
-  const zip = new AdmZip();
-  const fileName = 'test.txt';
-  zip.addFile(fileName, Buffer.from('Test content', 'utf8'));
-  const zipFilePath = `./${uuidv4()}.zip`;
-  zip.writeZip(zipFilePath);
+  it('should read the content of an existing file in a zip archive', function() {
+    const zip = new AdmZip();
+    const fileName = 'test.txt';
+    zip.addFile(fileName, Buffer.from('Test content', 'utf8'));
+    const zipFilePath = `./${uuidv4()}.zip`;
+    zip.writeZip(zipFilePath);
 
-  const content = readZipFile(zipFilePath, fileName);
-  assert.strictEqual(content, 'Test content');
+    const content = readZipFile(zipFilePath, fileName);
+    assert.strictEqual(content, 'Test content');
 
-  fs.unlinkSync(zipFilePath); // Clean up
-  console.log('readZipFile test passed');
-};
+    fs.unlinkSync(zipFilePath); // Clean up
+  });
 
-// Test writeZipFile
-const testWriteZipFile = () => {
-  const zip = new AdmZip();
-  const fileName = 'test.txt';
-  zip.addFile(fileName, Buffer.from('Old content', 'utf8'));
-  const zipFilePath = `./${uuidv4()}.zip`;
-  zip.writeZip(zipFilePath);
+  it('should throw an error if the file does not exist in the zip archive', function() {
+    const zip = new AdmZip();
+    const zipFilePath = `./${uuidv4()}.zip`;
+    zip.writeZip(zipFilePath);
 
-  writeZipFile(zipFilePath, fileName, 'New content');
-  const content = readZipFile(zipFilePath, fileName);
-  assert.strictEqual(content, 'New content');
+    assert.throws(() => {
+      readZipFile(zipFilePath, 'nonexistent.txt');
+    }, /Entry not found/);
 
-  fs.unlinkSync(zipFilePath); // Clean up
-  console.log('writeZipFile test passed');
-};
+    fs.unlinkSync(zipFilePath); // Clean up
+  });
 
-// Test processTagValue
-const testProcessTagValue = () => {
-  assert.strictEqual(processTagValue('simple text'), 'simple text');
-  assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
-  assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
-  assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
-  console.log('processTagValue test passed');
-};
+  it('should update the content of a file in a zip archive', function() {
+    const zip = new AdmZip();
+    const fileName = 'test.txt';
+    zip.addFile(fileName, Buffer.from('Old content', 'utf8'));
+    const zipFilePath = `./${uuidv4()}.zip`;
+    zip.writeZip(zipFilePath);
 
-// Test replacePlaceholder
-const testReplacePlaceholder = () => {
-  const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
-  assert(updatedContent.includes('<w:t>123c</w:t>'));
-  assert(updatedContent.includes('<w:t>kashish</w:t>'));
-  assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
-  console.log('replacePlaceholder test passed');
-};
+    writeZipFile(zipFilePath, fileName, 'New content');
+    const content = readZipFile(zipFilePath, fileName);
+    assert.strictEqual(content, 'New content');
 
-// Run tests
-testReadZipFile();
-testWriteZipFile();
-testProcessTagValue();
-testReplacePlaceholder();
+    fs.unlinkSync(zipFilePath); // Clean up
+  });
 
-console.log('All tests passed');
+  it('should process array values correctly', function() {
+    assert.strictEqual(processTagValue('simple text'), 'simple text');
+    assert.strictEqual(processTagValue({ text: 'text object' }), 'text object');
+    assert.strictEqual(processTagValue(['item1', 'item2']), '1. item1\n2. item2');
+    assert.strictEqual(processTagValue([{ text: 'object item' }]), '1. object item');
+  });
 
+  it('should replace placeholders in the document content', function() {
+    const updatedContent = replacePlaceholder(mockDocumentContent, jsonContent);
+    assert(updatedContent.includes('<w:t>123c</w:t>'));
+    assert(updatedContent.includes('<w:t>kashish</w:t>'));
+    assert(updatedContent.includes('<w:t>01/07/2024</w:t>'));
+  });
 
-
-Z:\Desktop\work-addin>npx mocha posttest.js
-readZipFile test passed
-writeZipFile test passed
-processTagValue test passed
-[2024-07-01T04:17:10.835Z] Entering replacePlaceholder
-[2024-07-01T04:17:10.842Z] Processing tag: Incident num
-[2024-07-01T04:17:10.843Z] Processing tag: authors
-[2024-07-01T04:17:10.844Z] Processing tag: date
-[2024-07-01T04:17:10.845Z] Exiting replacePlaceholder
-replacePlaceholder test passed
-All tests passed
-
-
-  0 passing (0ms)
+});
