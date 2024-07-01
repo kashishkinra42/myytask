@@ -133,12 +133,12 @@ describe('Document Processing Functions', function() {
     const zip = new AdmZip();
     const fileName = 'word/document.xml';
     zip.addFile(fileName, Buffer.from(mockDocumentContent, 'utf8'));
-    const zipFilePath = `./${uuidv4()}.zip`;
-    zip.writeZip(zipFilePath);
+    const newFileName = `./updated_${uuidv4()}.docx`;
+    zip.writeZip(newFileName);
 
-    processDocument(zipFilePath, jsonContent);
+    processDocument(newFileName, jsonContent);
 
-    const content = readZipFile(zipFilePath, fileName);
+    const content = readZipFile(newFileName, fileName);
     assert(content.includes('<w:t>123c</w:t>'));
     console.log('processDocument: Replaced Incident num in the sample DOCX correctly.');
 
@@ -153,7 +153,21 @@ describe('Document Processing Functions', function() {
     fs.writeFileSync(outputPath, zip.toBuffer());
     console.log('Sample DOCX created at:', outputPath);
 
-    fs.unlinkSync(zipFilePath); // Clean up
+    fs.unlinkSync(newFileName); // Clean up
+
+
+      const templateFilePath = './Test Document.docx';
+  
+
+  
+  fs.copyFileSync(templateFilePath, newFileName);
+
+  const documentContent = readZipFile(newFileName, fileName);
+  const updatedContent = replacePlaceholder(documentContent, jsonContent);
+  writeZipFile(newFileName, fileName, updatedContent);
+
+  return newFileName;
+
   });
 
 });
