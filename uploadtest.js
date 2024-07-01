@@ -6,7 +6,49 @@ const xml2js = require('xml2js');
 const proxyquire = require('proxyquire');
 const path = require('path');
 
-describe('extractContentControlTags', () => {
+// Mock XML content for different scenarios
+const validXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="tag1"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:p>
+          <w:r>
+            <w:t>Hello, World!</w:t>
+          </w:r>
+        </w:p>
+      </w:sdtContent>
+    </w:sdt>
+  </w:body>
+</w:document>`;
+
+const emptyXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+  </w:body>
+</w:document>`;
+
+const invalidXmlContent = `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:sdt>
+      <w:sdtPr>
+        <w:tag w:val="tag1"/>
+      </w:sdtPr>
+      <w:sdtContent>
+        <w:p>
+          <w:r>
+            <w:t>Hello, World!
+          </w:r>
+        </w:p>
+      </w:sdtContent>
+    </w:sdt>
+  </w:body>
+</w:document>`;
+
+describe('Document Processing Functions', () => {
   let readFileStub;
   let jszipStub;
   let parseStringPromiseStub;
@@ -21,23 +63,7 @@ describe('extractContentControlTags', () => {
     // Mock JSZip.loadAsync and .file().async()
     jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
       file: sinon.stub().returns({
-        async: sinon.stub().resolves(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-        <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-          <w:body>
-            <w:sdt>
-              <w:sdtPr>
-                <w:tag w:val="tag1"/>
-              </w:sdtPr>
-              <w:sdtContent>
-                <w:p>
-                  <w:r>
-                    <w:t>Hello, World!</w:t>
-                  </w:r>
-                </w:p>
-              </w:sdtContent>
-            </w:sdt>
-          </w:body>
-        </w:document>`),
+        async: sinon.stub().resolves(validXmlContent),
       }),
     });
 
@@ -78,7 +104,7 @@ describe('extractContentControlTags', () => {
     });
 
     // Use proxyquire to inject mocks
-    const { extractContentControlTags } = proxyquire('../path_to_your_module', {
+    this.functions = proxyquire('../path_to_your_module', {
       fs,
       jszip: JSZip,
       xml2js: {
@@ -87,109 +113,95 @@ describe('extractContentControlTags', () => {
         },
       },
     });
-
-    this.extractContentControlTags = extractContentControlTags;
   });
 
   afterEach(() => {
     sinon.restore();
   });
 
-  it('should extract content control tags from the document', async () => {
-    const result = await this.extractContentControlTags(mockDocxFilePath);
-
-    assert.deepEqual(result, {
-      tag1: 'Hello, World!',
+  describe('readFileContent', () => {
+    it('should read file content successfully', async () => {
+      const content = await this.functions.readFileContent(mockDocxFilePath);
+      assert(content);
+      assert(readFileStub.calledWith(mockDocxFilePath));
     });
 
-    assert(readFileStub.calledWith(mockDocxFilePath));
-    assert(jszipStub.calledWith(mockDocxFile));
-    assert(parseStringPromiseStub.calledOnce);
+    it('should handle file read errors', async () => {
+      readFileStub.rejects(new Error('File not found'));
+      await assert.rejects(this.functions.readFileContent('invalid_path.docx'), /File not found/);
+    });
   });
 
-  it('should handle errors gracefully', async () => {
-    readFileStub.rejects(new Error('File not found'));
-
-    await assert.rejects(async () => {
-      await this.extractContentControlTags('invalid_path.docx');
-    }, new Error('File not found'));
-  });
-});
-
-
-=========
-
-
-  const assert = require('assert');
-const sinon = require('sinon');
-const fs = require('fs');
-const JSZip = require('jszip');
-const xml2js = require('xml2js');
-const proxyquire = require('proxyquire');
-const path = require('path');
-
-describe('extractContentControlTags', () => {
-  let readFileStub;
-  let jszipStub;
-  let parseStringPromiseStub;
-
-  const mockDocxFilePath = path.join(__dirname, 'mock_document.docx');
-  const mockDocxFile = fs.readFileSync(mockDocxFilePath); // Read the binary content of the DOCX file
-
-  const mockXmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-  <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-    <w:body>
-      <w:sdt>
-        <w:sdtPr>
-          <w:tag w:val="tag1"/>
-        </w:sdtPr>
-        <w:sdtContent>
-          <w:p>
-            <w:r>
-              <w:t>Hello, World!</w:t>
-            </w:r>
-          </w:p>
-        </w:sdtContent>
-      </w:sdt>
-    </w:body>
-  </w:document>`;
-
-  beforeEach(() => {
-    // Mock fs.promises.readFile
-    readFileStub = sinon.stub(fs.promises, 'readFile').resolves(mockDocxFile);
-
-    // Mock JSZip.loadAsync and .file().async()
-    jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
-      file: sinon.stub().returns({
-        async: sinon.stub().resolves(mockXmlContent),
-      }),
+  describe('extractXmlFromZip', () => {
+    it('should extract XML content from zip successfully', async () => {
+      const xmlContent = await this.functions.extractXmlFromZip(mockDocxFile);
+      assert.strictEqual(xmlContent, validXmlContent);
     });
 
-    // Mock xml2js.Parser().parseStringPromise
-    parseStringPromiseStub = sinon.stub().resolves({
-      'w:document': {
-        'w:body': [
+    it('should handle zip extraction errors', async () => {
+      jszipStub.rejects(new Error('Invalid zip file'));
+      await assert.rejects(this.functions.extractXmlFromZip(mockDocxFile), /Invalid zip file/);
+    });
+  });
+
+  describe('parseXml', () => {
+    it('should parse valid XML content successfully', async () => {
+      const parsedXml = await this.functions.parseXml(validXmlContent);
+      assert(parsedXml);
+      assert(parseStringPromiseStub.calledWith(validXmlContent));
+    });
+
+    it('should handle invalid XML content', async () => {
+      parseStringPromiseStub.rejects(new Error('Invalid XML'));
+      await assert.rejects(this.functions.parseXml(invalidXmlContent), /Invalid XML/);
+    });
+  });
+
+  describe('extractTagValue', () => {
+    it('should extract tag value from content', () => {
+      const content = {
+        'w:p': [
           {
-            'w:sdt': [
+            'w:r': [
               {
-                'w:sdtPr': [
+                'w:t': ['Hello, World!'],
+              },
+            ],
+          },
+        ],
+      };
+      const result = this.functions.extractTagValue(content);
+      assert.strictEqual(result, 'Hello, World!');
+    });
+
+    it('should handle empty content', () => {
+      const content = {};
+      const result = this.functions.extractTagValue(content);
+      assert.strictEqual(result, '');
+    });
+  });
+
+  describe('extractTagsFromBody', () => {
+    it('should extract tags from body content', () => {
+      const bodyContent = {
+        'w:sdt': [
+          {
+            'w:sdtPr': [
+              {
+                'w:tag': [
                   {
-                    'w:tag': [
-                      {
-                        $: { 'w:val': 'tag1' },
-                      },
-                    ],
+                    $: { 'w:val': 'tag1' },
                   },
                 ],
-                'w:sdtContent': [
+              },
+            ],
+            'w:sdtContent': [
+              {
+                'w:p': [
                   {
-                    'w:p': [
+                    'w:r': [
                       {
-                        'w:r': [
-                          {
-                            'w:t': ['Hello, World!'],
-                          },
-                        ],
+                        'w:t': ['Hello, World!'],
                       },
                     ],
                   },
@@ -198,44 +210,41 @@ describe('extractContentControlTags', () => {
             ],
           },
         ],
-      },
+      };
+      const tags = this.functions.extractTagsFromBody(bodyContent);
+      assert.deepStrictEqual(tags, { tag1: 'Hello, World!' });
     });
 
-    // Use proxyquire to inject mocks
-    const { extractContentControlTags } = proxyquire('./path_to_your_module', {
-      fs,
-      jszip: JSZip,
-      xml2js: {
-        Parser: function () {
-          return { parseStringPromise: parseStringPromiseStub };
-        },
-      },
+    it('should handle body with no tags', () => {
+      const bodyContent = {};
+      const tags = this.functions.extractTagsFromBody(bodyContent);
+      assert.deepStrictEqual(tags, {});
+    });
+  });
+
+  describe('extractContentControlTags', () => {
+    it('should extract content control tags from the document', async () => {
+      const result = await this.functions.extractContentControlTags(mockDocxFilePath);
+      assert.deepStrictEqual(result, { tag1: 'Hello, World!' });
     });
 
-    this.extractContentControlTags = extractContentControlTags;
-  });
+    it('should handle empty XML content', async () => {
+      jszipStub.restore();
+      jszipStub = sinon.stub(JSZip, 'loadAsync').resolves({
+        file: sinon.stub().returns({
+          async: sinon.stub().resolves(emptyXmlContent),
+        }),
+      });
 
-  afterEach(() => {
-    sinon.restore();
-  });
-
-  it('should extract content control tags from the document', async () => {
-    const result = await this.extractContentControlTags('path_to_mock_file.docx');
-
-    assert.deepEqual(result, {
-      tag1: 'Hello, World!',
+      const result = await this.functions.extractContentControlTags(mockDocxFilePath);
+      assert.deepStrictEqual(result, {});
     });
 
-    assert(readFileStub.calledWith('path_to_mock_file.docx'));
-    assert(jszipStub.calledWith(mockDocxFile));
-    assert(parseStringPromiseStub.calledWith(mockXmlContent));
-  });
+    it('should handle invalid XML content', async () => {
+      parseStringPromiseStub.restore();
+      parseStringPromiseStub = sinon.stub().rejects(new Error('Invalid XML'));
 
-  it('should handle errors gracefully', async () => {
-    readFileStub.rejects(new Error('File not found'));
-
-    await assert.rejects(async () => {
-      await this.extractContentControlTags('invalid_path.docx');
-    }, new Error('File not found'));
+      await assert.rejects(this.functions.extractContentControlTags(mockDocxFilePath), /Invalid XML/);
+    });
   });
 });
