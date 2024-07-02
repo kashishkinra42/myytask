@@ -42,14 +42,9 @@ function extractTagsFromBody(body) {
         if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
           const tagName = tag[0]['$']['w:val'];
           const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
-          console.log(`Tag found: ${tagName} with value: ${JSON.stringify(tagValue)}`);
-          if (tags[tagName]) {
-            if (Array.isArray(tags[tagName])) {
-              tags[tagName].push(tagValue);
-            } else {
-              tags[tagName] = [tags[tagName], tagValue];
-            }
-          } else {
+          if (typeof tagValue === 'string' && tagValue.trim() !== '') {
+            tags[tagName] = tagValue;
+          } else if (Array.isArray(tagValue) && tagValue.length > 0) {
             tags[tagName] = tagValue;
           }
         }
@@ -63,27 +58,19 @@ function extractTagsFromBody(body) {
   }
 
   traverseNodes(body);
-
-  // Convert any single-value arrays to strings
-  Object.keys(tags).forEach(tagName => {
-    if (Array.isArray(tags[tagName]) && tags[tagName].length === 1) {
-      tags[tagName] = tags[tagName][0];
-    }
-  });
-
-  console.log('Tags after traversal:', JSON.stringify(tags, null, 2));
   return tags;
 }
 
 function extractTagValue(content) {
   let text = '';
   let listItems = [];
-  let table = [];
+  let tables = [];
 
   function traverseContent(contentNode) {
     if (contentNode['w:p']) {
       contentNode['w:p'].forEach(pNode => {
         if (pNode['w:pPr'] && pNode['w:pPr'][0]['w:numPr']) {
+          // Detect a numbered list item
           const listItem = extractTextFromNode(pNode);
           if (typeof listItem === 'string' && listItem.trim() !== '') {
             listItems.push(listItem);
@@ -91,6 +78,7 @@ function extractTagValue(content) {
             listItems.push(listItem);
           }
         } else {
+          // Regular text node
           const pText = extractTextFromNode(pNode);
           if (typeof pText === 'string' && pText.trim() !== '') {
             text += pText;
@@ -100,28 +88,17 @@ function extractTagValue(content) {
         }
       });
     } else if (contentNode['w:tbl']) {
+      // Handle table nodes
       contentNode['w:tbl'].forEach(tblNode => {
-        table.push(extractTableFromNode(tblNode));
+        tables.push(extractTableFromNode(tblNode));
       });
     }
+
     Object.values(contentNode).forEach(value => {
       if (Array.isArray(value)) {
         value.forEach(child => traverseContent(child));
       }
     });
-  }
-
-  function extractTableFromNode(tblNode) {
-    let rows = [];
-    tblNode['w:tr'].forEach(trNode => {
-      let row = [];
-      trNode['w:tc'].forEach(tcNode => {
-        const cellText = extractTextFromNode(tcNode);
-        row.push(cellText);
-      });
-      rows.push(row);
-    });
-    return rows;
   }
 
   function extractTextFromNode(node) {
@@ -151,10 +128,22 @@ function extractTagValue(content) {
     return nodeText;
   }
 
+  function extractTableFromNode(tblNode) {
+    const table = [];
+    tblNode['w:tr'].forEach(trNode => {
+      const row = [];
+      trNode['w:tc'].forEach(tcNode => {
+        row.push(extractTextFromNode(tcNode));
+      });
+      table.push(row);
+    });
+    return table;
+  }
+
   traverseContent(content);
 
-  if (table.length > 0) {
-    return table;
+  if (tables.length > 0) {
+    return tables;
   } else if (listItems.length > 0) {
     return listItems;
   } else {
