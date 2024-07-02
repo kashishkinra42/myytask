@@ -1,52 +1,127 @@
-{
-  "Incident Action Items": [
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ]
-  ]
+const fs = require('fs');
+const JSZip = require('jszip');
+const xml2js = require('xml2js');
+
+async function extractContentControlTags(fpath) {
+  try {
+    const documentXml = await readDocumentXml(fpath);
+    const tags = await parseDocumentXml(documentXml);
+    saveTagsToFile(tags, 'myoutputk.json');
+  } catch (error) {
+    console.error('Error:', error);
+  }
 }
+
+async function readDocumentXml(fpath) {
+  const data = fs.readFileSync(fpath);
+  const zip = await JSZip.loadAsync(data);
+  const documentXml = await zip.file('word/document.xml').async('text');
+  return documentXml;
+}
+
+async function parseDocumentXml(documentXml) {
+  const parser = new xml2js.Parser();
+  return new Promise((resolve, reject) => {
+    parser.parseString(documentXml, (err, result) => {
+      if (err) {
+        return reject(err);
+      }
+      const tags = extractTagsFromBody(result['w:document']['w:body'][0]);
+      resolve(tags);
+    });
+  });
+}
+
+function extractTagsFromBody(body) {
+  const tags = {};
+
+  function traverseNodes(node) {
+    if (node['w:sdt']) {
+      node['w:sdt'].forEach(sdt => {
+        const tag = sdt['w:sdtPr'][0]['w:tag'];
+        if (tag && tag[0]['$'] && tag[0]['$']['w:val']) {
+          const tagName = tag[0]['$']['w:val'];
+          const tagValue = extractTagValue(sdt['w:sdtContent'][0]);
+          if (tagValue) {
+            tags[tagName] = tagValue;
+          }
+        }
+      });
+    }
+    Object.values(node).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseNodes(child));
+      }
+    });
+  }
+
+  traverseNodes(body);
+  return tags;
+}
+
+function extractTagValue(content) {
+  let tables = [];
+
+  function traverseContent(contentNode) {
+    if (contentNode['w:tbl']) {
+      // Handle table nodes
+      contentNode['w:tbl'].forEach(tblNode => {
+        tables.push(extractTableFromNode(tblNode));
+      });
+    }
+
+    Object.values(contentNode).forEach(value => {
+      if (Array.isArray(value)) {
+        value.forEach(child => traverseContent(child));
+      }
+    });
+  }
+
+  function extractTextFromNode(node) {
+    let nodeText = '';
+
+    if (node['w:r']) {
+      node['w:r'].forEach(rNode => {
+        if (rNode['w:t']) {
+          rNode['w:t'].forEach(textNode => {
+            if (typeof textNode === 'string') {
+              nodeText += textNode;
+            } else if (textNode['_']) {
+              nodeText += textNode['_'];
+            }
+          });
+        }
+      });
+    }
+
+    return nodeText.trim();
+  }
+
+  function extractTableFromNode(tblNode) {
+    const table = [];
+    tblNode['w:tr'].forEach(trNode => {
+      const row = [];
+      trNode['w:tc'].forEach(tcNode => {
+        const cellText = extractTextFromNode(tcNode);
+        row.push(cellText);
+      });
+      table.push(row);
+    });
+    return table;
+  }
+
+  traverseContent(content);
+
+  if (tables.length > 0) {
+    return tables[0]; // Return the first table found in the content control
+  }
+  return null;
+}
+
+function saveTagsToFile(tags, outputPath) {
+  const jsonFile = JSON.stringify(tags, null, 2);
+  fs.writeFileSync(outputPath, jsonFile);
+}
+
+const fpath = './testttt.docx';
+extractContentControlTags(fpath);
